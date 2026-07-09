@@ -10,7 +10,7 @@ const navItems = [
   { href: "/schedule", label: "予定", icon: "S" },
   { href: "/attendance", label: "出欠", icon: "A" },
   { href: "/documents", label: "資料", icon: "D" },
-  { href: "/announcements", label: "お知らせ", icon: "N" },
+  { href: "/committees", label: "委員会", icon: "C" },
   { href: "/members", label: "会員", icon: "M" }
 ];
 
