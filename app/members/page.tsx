@@ -21,7 +21,7 @@ export default async function MembersPage() {
     <AppShell>
       <PageHeader
         action={{ href: "/members/new", label: "新規登録" }}
-        description="会員の基本情報を管理します。年度ごとの役職、委員会、権限は年度管理側で別管理します。"
+        description="会員の基本情報を管理します。年度ごとの役職、委員会、権限は年度管理で別管理します。"
         title="会員管理"
       />
 

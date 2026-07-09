@@ -10,7 +10,7 @@ export const statusLabels: Record<MemberStatus, string> = {
 export const roleLabels: Record<LegacyAnnualRole, string> = {
   owner: "LOM管理者",
   admin: "管理者",
-  committee_manager: "委員会管理",
+  committee_manager: "委員会管理者",
   member: "会員"
 };
 
