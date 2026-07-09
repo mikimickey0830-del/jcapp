@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { unstable_noStore as noStore } from "next/cache";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusPill } from "@/components/StatusPill";
 import { memberService } from "@/services/memberService";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const statusTone = {
   active: "green",
@@ -13,6 +15,7 @@ const statusTone = {
 } as const;
 
 export default async function MembersPage() {
+  noStore();
   const { data: members, error, source } = await memberService.getMembers();
   const { getCurrentAnnualProfile, roleLabels, statusLabels } = memberService;
   const activeCount = members.filter((member) => member.status === "active").length;

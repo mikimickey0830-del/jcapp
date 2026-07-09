@@ -7,7 +7,7 @@ export default function NewMemberPage() {
     <AppShell>
       <PageHeader
         backHref="/members"
-        description="まずは年度をまたいで使う会員基本情報だけを登録します。"
+        description="年度をまたいで利用する会員基本情報を登録します。役職や委員会は年度管理で設定します。"
         title="会員登録"
       />
       <MemberForm mode="create" />

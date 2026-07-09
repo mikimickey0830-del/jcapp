@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unstable_noStore as noStore } from "next/cache";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
@@ -6,6 +7,7 @@ import { StatusPill } from "@/components/StatusPill";
 import { memberService } from "@/services/memberService";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const statusTone = {
   active: "green",
@@ -14,6 +16,7 @@ const statusTone = {
 } as const;
 
 export default async function MemberDetailPage({ params }: { params: { memberId: string } }) {
+  noStore();
   const { data: member, error, source } = await memberService.getMemberById(params.memberId);
   const { roleLabels, statusLabels } = memberService;
 
