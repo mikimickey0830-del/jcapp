@@ -1,8 +1,12 @@
 import Link from "next/link";
+import { unstable_noStore as noStore } from "next/cache";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusPill } from "@/components/StatusPill";
-import { useYears } from "@/hooks/useYears";
+import { yearService } from "@/services/yearService";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const statusTone = {
   current: "green",
@@ -10,8 +14,11 @@ const statusTone = {
   closed: "blue"
 } as const;
 
-export default function YearsPage() {
-  const { fiscalYears, fiscalYearStatusLabels } = useYears();
+export default async function YearsPage() {
+  noStore();
+  const { data: fiscalYears, error, source } = await yearService.getYears();
+  const currentYear = fiscalYears.find((fiscalYear) => fiscalYear.status === "current");
+  const lomCount = new Set(fiscalYears.map((fiscalYear) => fiscalYear.lomName)).size;
 
   return (
     <AppShell>
@@ -21,18 +28,20 @@ export default function YearsPage() {
         title="年度管理"
       />
 
+      <DataSourceNotice error={error} source={source} />
+
       <section className="grid grid-cols-3 gap-3">
         <SummaryCard label="年度数" value={String(fiscalYears.length)} />
-        <SummaryCard label="現在" value="2026" />
-        <SummaryCard label="LOM" value="1" />
+        <SummaryCard label="現在" value={currentYear ? String(currentYear.year) : "-"} />
+        <SummaryCard label="LOM" value={String(lomCount)} />
       </section>
 
       <section className="mt-5 space-y-3">
         {fiscalYears.map((fiscalYear) => (
           <Link
             className="block rounded-md border border-jc-line bg-white p-4 shadow-sm transition hover:border-jc-blue hover:shadow-soft"
-            href={`/years/${fiscalYear.year}`}
-            key={fiscalYear.year}
+            href={`/years/${fiscalYear.id}`}
+            key={fiscalYear.id}
           >
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -40,7 +49,7 @@ export default function YearsPage() {
                 <h2 className="mt-1 text-lg font-bold text-slate-900">{fiscalYear.name}</h2>
               </div>
               <StatusPill
-                label={fiscalYearStatusLabels[fiscalYear.status]}
+                label={yearService.fiscalYearStatusLabels[fiscalYear.status]}
                 tone={statusTone[fiscalYear.status]}
               />
             </div>
@@ -48,7 +57,7 @@ export default function YearsPage() {
             <div className="mt-3 grid grid-cols-3 gap-2">
               <MiniStat label="役職" value={String(fiscalYear.positions.length)} />
               <MiniStat label="委員会" value={String(fiscalYear.committees.length)} />
-              <MiniStat label="年度所属" value={String(fiscalYear.assignments.length)} />
+              <MiniStat label="所属" value={String(fiscalYear.assignments.length)} />
             </div>
 
             <p className="mt-3 text-xs leading-5 text-slate-500">
@@ -59,6 +68,18 @@ export default function YearsPage() {
         ))}
       </section>
     </AppShell>
+  );
+}
+
+function DataSourceNotice({ error, source }: { error: string | null; source: "supabase" | "fallback" }) {
+  if (!error && source === "supabase") {
+    return null;
+  }
+
+  return (
+    <section className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-800">
+      {error ?? "Supabaseに該当データがないため、仮データを表示しています。"}
+    </section>
   );
 }
 

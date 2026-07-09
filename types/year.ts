@@ -1,4 +1,4 @@
-import type { LegacyAnnualRole } from "@/types/common";
+import type { AnnualRole } from "@/types/common";
 
 export type FiscalYearStatus = "current" | "planned" | "closed";
 
@@ -18,11 +18,16 @@ export type AnnualAssignment = {
   memberId: string;
   committeeId: string;
   positionId: string;
-  role: LegacyAnnualRole;
+  role: AnnualRole;
   isBoardMember: boolean;
+  memberName?: string;
+  memberKana?: string;
+  committeeName?: string;
+  positionName?: string;
 };
 
 export type FiscalYear = {
+  id: string;
   year: number;
   name: string;
   lomName: string;

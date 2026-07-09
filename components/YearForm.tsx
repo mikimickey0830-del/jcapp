@@ -1,20 +1,142 @@
-import Link from "next/link";
-import { useYears } from "@/hooks/useYears";
+"use client";
 
-export function YearForm() {
-  const { fiscalYears } = useYears();
-  const copySource = fiscalYears.find((year) => year.year === 2026);
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import type { FiscalYear } from "@/types/year";
+
+type YearFormProps = {
+  fiscalYears: FiscalYear[];
+};
+
+type FormErrors = {
+  name?: string;
+  startsOn?: string;
+  endsOn?: string;
+  form?: string;
+};
+
+export function YearForm({ fiscalYears }: YearFormProps) {
+  const router = useRouter();
+  const latestYear = useMemo(
+    () => [...fiscalYears].sort((a, b) => b.year - a.year)[0],
+    [fiscalYears]
+  );
+  const nextYear = latestYear ? latestYear.year + 1 : new Date().getFullYear() + 1;
+  const [name, setName] = useState(`${nextYear}年度`);
+  const [startsOn, setStartsOn] = useState(`${nextYear}-01-01`);
+  const [endsOn, setEndsOn] = useState(`${nextYear}-12-31`);
+  const [copyFromFiscalYearId, setCopyFromFiscalYearId] = useState(latestYear?.id ?? "");
+  const [copyCommittees, setCopyCommittees] = useState(true);
+  const [copyPositions, setCopyPositions] = useState(true);
+  const [copyAssignments, setCopyAssignments] = useState(true);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [isSaving, setIsSaving] = useState(false);
+
+  const copySource = fiscalYears.find((year) => year.id === copyFromFiscalYearId);
+
+  function validate() {
+    const nextErrors: FormErrors = {};
+
+    if (!name.trim()) {
+      nextErrors.name = "年度名を入力してください。";
+    }
+
+    if (!startsOn) {
+      nextErrors.startsOn = "開始日を入力してください。";
+    }
+
+    if (!endsOn) {
+      nextErrors.endsOn = "終了日を入力してください。";
+    }
+
+    if (startsOn && endsOn && startsOn > endsOn) {
+      nextErrors.endsOn = "終了日は開始日以降にしてください。";
+    }
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  }
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!validate()) {
+      return;
+    }
+
+    setIsSaving(true);
+    setErrors({});
+
+    try {
+      const response = await fetch("/api/years", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          startsOn,
+          endsOn,
+          copyFromFiscalYearId: copyFromFiscalYearId || null,
+          copyCommittees,
+          copyPositions,
+          copyAssignments
+        })
+      });
+
+      const result = (await response.json()) as { id?: string; error?: string };
+
+      if (!response.ok || !result.id) {
+        setErrors({ form: result.error ?? "年度を保存できませんでした。" });
+        return;
+      }
+
+      router.push(`/years/${result.id}`);
+      router.refresh();
+    } catch {
+      setErrors({ form: "通信エラーが発生しました。時間をおいて再度お試しください。" });
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   return (
-    <form className="space-y-5">
+    <form className="space-y-5" onSubmit={handleSubmit}>
+      {errors.form ? (
+        <section className="rounded-md border border-red-200 bg-red-50 p-3 text-sm leading-6 text-red-700">
+          {errors.form}
+        </section>
+      ) : null}
+
       <section className="rounded-md border border-jc-line bg-white p-4 shadow-sm">
         <h2 className="text-base font-bold text-jc-navy">年度基本情報</h2>
         <div className="mt-4 space-y-3">
-          <TextField defaultValue="2027年度" label="年度名" name="name" />
-          <TextField defaultValue="玉島青年会議所" label="LOM" name="lomName" />
-          <div className="grid grid-cols-2 gap-3">
-            <TextField defaultValue="2027-01-01" label="開始日" name="startsOn" type="date" />
-            <TextField defaultValue="2027-12-31" label="終了日" name="endsOn" type="date" />
+          <TextField
+            error={errors.name}
+            label="年度名"
+            name="name"
+            onChange={setName}
+            value={name}
+          />
+          <TextField label="LOM" name="lomName" readOnly value={latestYear?.lomName ?? "玉島青年会議所"} />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <TextField
+              error={errors.startsOn}
+              label="開始日"
+              name="startsOn"
+              onChange={setStartsOn}
+              type="date"
+              value={startsOn}
+            />
+            <TextField
+              error={errors.endsOn}
+              label="終了日"
+              name="endsOn"
+              onChange={setEndsOn}
+              type="date"
+              value={endsOn}
+            />
           </div>
         </div>
       </section>
@@ -22,19 +144,19 @@ export function YearForm() {
       <section className="rounded-md border border-jc-line bg-white p-4 shadow-sm">
         <h2 className="text-base font-bold text-jc-navy">前年度コピー</h2>
         <p className="mt-1 text-sm leading-6 text-slate-600">
-          新年度の土台として、前年度の役職、委員会、会員ごとの年度所属を複製します。
-          コピー後に新年度の体制へ編集します。
+          コピー元の役職、委員会、会員ごとの年度所属と権限を、新年度の初期データとして保存します。
         </p>
 
         <label className="mt-4 block">
           <span className="mb-2 block text-sm font-semibold text-slate-700">コピー元年度</span>
           <select
             className="min-h-12 w-full rounded-md border border-jc-line bg-slate-50 px-3 text-base outline-none focus:border-jc-blue focus:bg-white focus:ring-4 focus:ring-blue-100"
-            defaultValue="2026"
-            name="copyFromYear"
+            onChange={(event) => setCopyFromFiscalYearId(event.target.value)}
+            value={copyFromFiscalYearId}
           >
+            <option value="">コピーしない</option>
             {fiscalYears.map((year) => (
-              <option key={year.year} value={year.year}>
+              <option key={year.id} value={year.id}>
                 {year.name}
               </option>
             ))}
@@ -42,11 +164,9 @@ export function YearForm() {
         </label>
 
         <div className="mt-4 grid gap-2">
-          <CheckRow defaultChecked label="役職マスタをコピー" name="copyPositions" />
-          <CheckRow defaultChecked label="委員会マスタをコピー" name="copyCommittees" />
-          <CheckRow defaultChecked label="会員ごとの年度所属をコピー" name="copyAssignments" />
-          <CheckRow defaultChecked label="会員ごとの年度役職をコピー" name="copyMemberPositions" />
-          <CheckRow defaultChecked label="会員ごとの年度権限をコピー" name="copyMemberRoles" />
+          <CheckRow checked={copyPositions} label="役職マスタをコピー" onChange={setCopyPositions} />
+          <CheckRow checked={copyCommittees} label="委員会マスタをコピー" onChange={setCopyCommittees} />
+          <CheckRow checked={copyAssignments} label="会員ごとの年度所属・年度権限をコピー" onChange={setCopyAssignments} />
         </div>
 
         {copySource ? (
@@ -63,7 +183,7 @@ export function YearForm() {
       <section className="rounded-md border border-dashed border-jc-line bg-slate-50 p-4">
         <h2 className="text-base font-bold text-jc-navy">作成後に編集する情報</h2>
         <p className="mt-1 text-sm leading-6 text-slate-600">
-          コピーされた役職、委員会、会員ごとの年度所属・年度役職・年度権限は年度詳細画面で編集する想定です。
+          コピーされた内容は、年度詳細画面で確認できます。役職、委員会、会員別の所属・権限編集は次の実装で追加します。
         </p>
       </section>
 
@@ -75,10 +195,11 @@ export function YearForm() {
           キャンセル
         </Link>
         <button
-          className="min-h-12 rounded-md bg-jc-blue px-4 text-sm font-bold text-white shadow-soft"
-          type="button"
+          className="min-h-12 rounded-md bg-jc-blue px-4 text-sm font-bold text-white shadow-soft disabled:cursor-not-allowed disabled:bg-slate-400"
+          disabled={isSaving}
+          type="submit"
         >
-          新年度を作成
+          {isSaving ? "保存中..." : "新年度を作成"}
         </button>
       </div>
     </form>
@@ -89,30 +210,52 @@ function TextField({
   label,
   name,
   type = "text",
-  defaultValue
+  value,
+  onChange,
+  error,
+  readOnly = false
 }: {
   label: string;
   name: string;
   type?: string;
-  defaultValue?: string;
+  value: string;
+  onChange?: (value: string) => void;
+  error?: string;
+  readOnly?: boolean;
 }) {
   return (
     <label className="block">
       <span className="mb-2 block text-sm font-semibold text-slate-700">{label}</span>
       <input
-        className="min-h-12 w-full rounded-md border border-jc-line bg-slate-50 px-3 text-base outline-none focus:border-jc-blue focus:bg-white focus:ring-4 focus:ring-blue-100"
-        defaultValue={defaultValue}
+        className="min-h-12 w-full rounded-md border border-jc-line bg-slate-50 px-3 text-base outline-none focus:border-jc-blue focus:bg-white focus:ring-4 focus:ring-blue-100 disabled:text-slate-500"
         name={name}
+        onChange={(event) => onChange?.(event.target.value)}
+        readOnly={readOnly}
         type={type}
+        value={value}
       />
+      {error ? <span className="mt-1 block text-xs font-semibold text-red-600">{error}</span> : null}
     </label>
   );
 }
 
-function CheckRow({ label, name, defaultChecked }: { label: string; name: string; defaultChecked?: boolean }) {
+function CheckRow({
+  label,
+  checked,
+  onChange
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
   return (
     <label className="flex min-h-12 items-center gap-3 rounded-md border border-jc-line bg-slate-50 px-3">
-      <input className="size-5 accent-jc-blue" defaultChecked={defaultChecked} name={name} type="checkbox" />
+      <input
+        checked={checked}
+        className="size-5 accent-jc-blue"
+        onChange={(event) => onChange(event.target.checked)}
+        type="checkbox"
+      />
       <span className="text-sm font-semibold text-slate-700">{label}</span>
     </label>
   );

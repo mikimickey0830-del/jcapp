@@ -9,6 +9,7 @@ export const fiscalYearStatusLabels: Record<FiscalYearStatus, string> = {
 
 export const fiscalYears: FiscalYear[] = [
   {
+    id: "10000000-0000-0000-0000-000000002027",
     year: 2027,
     name: "2027年度",
     lomName: "玉島青年会議所",
@@ -33,71 +34,73 @@ export const fiscalYears: FiscalYear[] = [
         memberId: "m001",
         committeeId: "c2027-01",
         positionId: "p2027-03",
-        role: "committee_manager",
+        role: "chair",
         isBoardMember: true
       },
       {
         memberId: "m002",
         committeeId: "c2027-02",
         positionId: "p2027-04",
-        role: "member",
+        role: "vice_chair",
         isBoardMember: false
       }
     ]
   },
   {
+    id: "10000000-0000-0000-0000-000000002026",
     year: 2026,
     name: "2026年度",
     lomName: "玉島青年会議所",
     startsOn: "2026-01-01",
     endsOn: "2026-12-31",
     status: "current",
+    copiedFromYear: 2025,
     committees: [
-      { id: "c2026-01", name: "総務広報委員会", sortOrder: 1 },
-      { id: "c2026-02", name: "例会委員会", sortOrder: 2 },
-      { id: "c2026-03", name: "地域事業委員会", sortOrder: 3 },
-      { id: "c2026-04", name: "監事", sortOrder: 4 }
+      { id: "30000000-0000-0000-0000-000000000001", name: "総務広報委員会", sortOrder: 1 },
+      { id: "30000000-0000-0000-0000-000000000002", name: "例会委員会", sortOrder: 2 },
+      { id: "30000000-0000-0000-0000-000000000003", name: "地域事業委員会", sortOrder: 3 },
+      { id: "30000000-0000-0000-0000-000000000004", name: "監事", sortOrder: 4 }
     ],
     positions: [
-      { id: "p2026-01", name: "理事長", sortOrder: 1 },
-      { id: "p2026-02", name: "専務理事", sortOrder: 2 },
-      { id: "p2026-03", name: "直前理事長", sortOrder: 3 },
-      { id: "p2026-04", name: "委員長", sortOrder: 4 },
-      { id: "p2026-05", name: "副委員長", sortOrder: 5 },
-      { id: "p2026-06", name: "委員", sortOrder: 6 }
+      { id: "40000000-0000-0000-0000-000000000001", name: "理事長", sortOrder: 1 },
+      { id: "40000000-0000-0000-0000-000000000002", name: "専務理事", sortOrder: 2 },
+      { id: "40000000-0000-0000-0000-000000000003", name: "委員長", sortOrder: 3 },
+      { id: "40000000-0000-0000-0000-000000000004", name: "副委員長", sortOrder: 4 },
+      { id: "40000000-0000-0000-0000-000000000005", name: "委員", sortOrder: 5 }
     ],
     assignments: [
       {
         memberId: "m001",
-        committeeId: "c2026-01",
-        positionId: "p2026-04",
-        role: "committee_manager",
+        committeeId: "30000000-0000-0000-0000-000000000001",
+        positionId: "40000000-0000-0000-0000-000000000003",
+        role: "chair",
         isBoardMember: true
       },
       {
         memberId: "m002",
-        committeeId: "c2026-02",
-        positionId: "p2026-05",
-        role: "member",
+        committeeId: "30000000-0000-0000-0000-000000000002",
+        positionId: "40000000-0000-0000-0000-000000000004",
+        role: "vice_chair",
         isBoardMember: false
       },
       {
         memberId: "m003",
-        committeeId: "c2026-04",
-        positionId: "p2026-03",
+        committeeId: "30000000-0000-0000-0000-000000000004",
+        positionId: "40000000-0000-0000-0000-000000000002",
         role: "admin",
         isBoardMember: true
       },
       {
         memberId: "m004",
-        committeeId: "c2026-03",
-        positionId: "p2026-06",
+        committeeId: "30000000-0000-0000-0000-000000000003",
+        positionId: "40000000-0000-0000-0000-000000000005",
         role: "member",
         isBoardMember: false
       }
     ]
   },
   {
+    id: "10000000-0000-0000-0000-000000002025",
     year: 2025,
     name: "2025年度",
     lomName: "玉島青年会議所",
@@ -126,8 +129,9 @@ export const fiscalYears: FiscalYear[] = [
   }
 ];
 
-export function getFiscalYear(year: string | number) {
-  return fiscalYears.find((fiscalYear) => fiscalYear.year === Number(year));
+export function getFiscalYear(yearOrId: string | number) {
+  const value = String(yearOrId);
+  return fiscalYears.find((fiscalYear) => fiscalYear.id === value || fiscalYear.year === Number(value));
 }
 
 export function getCommittee(fiscalYear: FiscalYear, committeeId: string) {
@@ -144,10 +148,10 @@ export function getAssignmentRows(fiscalYear: FiscalYear) {
 
     return {
       ...assignment,
-      memberName: member ? `${member.lastName} ${member.firstName}` : "未登録会員",
-      memberKana: member ? `${member.lastNameKana} ${member.firstNameKana}` : "",
-      committeeName: getCommittee(fiscalYear, assignment.committeeId)?.name ?? "未設定",
-      positionName: getPosition(fiscalYear, assignment.positionId)?.name ?? "未設定"
+      memberName: assignment.memberName ?? (member ? `${member.lastName} ${member.firstName}` : "未登録会員"),
+      memberKana: assignment.memberKana ?? (member ? `${member.lastNameKana} ${member.firstNameKana}` : ""),
+      committeeName: assignment.committeeName ?? getCommittee(fiscalYear, assignment.committeeId)?.name ?? "未設定",
+      positionName: assignment.positionName ?? getPosition(fiscalYear, assignment.positionId)?.name ?? "未設定"
     };
   });
 }
