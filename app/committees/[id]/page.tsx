@@ -5,18 +5,12 @@ import { AppShell } from "@/components/AppShell";
 import { CommitteeDeleteButton } from "@/components/CommitteeDeleteButton";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusPill } from "@/components/StatusPill";
+import { committeeRoleLabels } from "@/lib/assignments";
 import { committeeService } from "@/services/committeeService";
-import type { CommitteeMemberRole } from "@/types/committee";
+import type { CommitteeDetail, CommitteeMemberRole } from "@/types/committee";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
-const roleLabels: Record<CommitteeMemberRole, string> = {
-  vice_president: "担当副理事長",
-  chair: "委員長",
-  vice_chair: "副委員長",
-  member: "委員"
-};
 
 export default async function CommitteeDetailPage({ params }: { params: { id: string } }) {
   noStore();
@@ -31,7 +25,7 @@ export default async function CommitteeDetailPage({ params }: { params: { id: st
       <PageHeader
         action={{ href: `/committees/${committee.id}/edit`, label: "編集" }}
         backHref="/committees"
-        description="委員会の担当役員、委員長、副委員長、委員一覧を確認します。"
+        description="委員会に所属する会員、委員会内の区分、主所属、備考を確認します。"
         title={committee.name}
       />
 
@@ -51,13 +45,13 @@ export default async function CommitteeDetailPage({ params }: { params: { id: st
       </section>
 
       <section className="mt-5 grid grid-cols-3 gap-3">
-        <SummaryCard label="担当" value={personName(committee, "vice_president")} />
         <SummaryCard label="委員長" value={personName(committee, "chair")} />
         <SummaryCard label="副委員長" value={personName(committee, "vice_chair")} />
+        <SummaryCard label="主所属" value={String(committee.members.filter((member) => member.isPrimary).length)} />
       </section>
 
       <section className="mt-6">
-        <h2 className="text-lg font-bold text-jc-navy">委員一覧</h2>
+        <h2 className="text-lg font-bold text-jc-navy">所属会員一覧</h2>
         <div className="mt-3 space-y-3">
           {committee.members.length > 0 ? (
             committee.members.map((member) => (
@@ -72,13 +66,28 @@ export default async function CommitteeDetailPage({ params }: { params: { id: st
                     </h3>
                     <p className="mt-1 truncate text-xs text-slate-500">{member.email}</p>
                   </div>
-                  <StatusPill label={roleLabels[member.role]} tone={member.role === "member" ? "blue" : "green"} />
+                  <StatusPill
+                    label={committeeRoleLabels[member.role]}
+                    tone={member.role === "member" ? "blue" : "green"}
+                  />
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {member.isPrimary ? (
+                    <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">主所属</span>
+                  ) : (
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">兼任</span>
+                  )}
+                  {member.note ? (
+                    <span className="rounded-full bg-jc-sky px-3 py-1 text-xs font-bold text-jc-blue">
+                      {member.note}
+                    </span>
+                  ) : null}
                 </div>
               </article>
             ))
           ) : (
             <p className="rounded-md border border-dashed border-jc-line bg-slate-50 p-3 text-sm leading-6 text-slate-600">
-              委員はまだ登録されていません。
+              所属会員はまだ登録されていません。
             </p>
           )}
         </div>
@@ -95,7 +104,7 @@ export default async function CommitteeDetailPage({ params }: { params: { id: st
   );
 }
 
-function personName(committee: NonNullable<Awaited<ReturnType<typeof committeeService.getCommitteeById>>["data"]>, role: CommitteeMemberRole) {
+function personName(committee: CommitteeDetail, role: CommitteeMemberRole) {
   const member = committee.members.find((item) => item.role === role);
   return member ? `${member.lastName}` : "-";
 }

@@ -1,12 +1,14 @@
 import type { Member } from "@/types/member";
 
-export type CommitteeMemberRole = "vice_president" | "chair" | "vice_chair" | "member";
+export type CommitteeMemberRole = "vice_president" | "chair" | "vice_chair" | "member" | "observer" | "advisor";
 
 export type CommitteeMember = Pick<
   Member,
   "id" | "lastName" | "firstName" | "lastNameKana" | "firstNameKana" | "email"
 > & {
   role: CommitteeMemberRole;
+  isPrimary: boolean;
+  note: string;
 };
 
 export type CommitteeDetail = {

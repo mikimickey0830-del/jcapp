@@ -18,6 +18,15 @@ export const assignmentRoleLabels = {
   committee_manager: "委員長"
 } as const;
 
+export const committeeRoleLabels = {
+  vice_president: "担当副理事長",
+  chair: "委員長",
+  vice_chair: "副委員長",
+  member: "委員",
+  observer: "オブザーバー",
+  advisor: "アドバイザー"
+} as const;
+
 export function getFallbackAssignmentSummaries(): AssignmentYearSummary[] {
   return fiscalYears.map((year) => ({
     fiscalYearId: year.id,
@@ -47,6 +56,23 @@ export function getFallbackAssignmentYear(yearId: string): AssignmentYearDetail 
       const assignment = fiscalYear.assignments.find((item) => item.memberId === member.id);
       const committee = fiscalYear.committees.find((item) => item.id === assignment?.committeeId);
       const position = fiscalYear.positions.find((item) => item.id === assignment?.positionId);
+      const committeeMemberships = assignment?.committeeId
+        ? [
+            {
+              id: `${fiscalYear.id}-${member.id}-${assignment.committeeId}`,
+              committeeId: assignment.committeeId,
+              committeeName: committee?.name ?? "未設定",
+              roleInCommittee:
+                assignment.role === "chair" || assignment.role === "committee_manager"
+                  ? "chair"
+                  : assignment.role === "vice_chair"
+                    ? "vice_chair"
+                    : "member",
+              isPrimary: true,
+              note: ""
+            } as const
+          ]
+        : [];
 
       return {
         id: assignment ? `${fiscalYear.id}-${member.id}` : "",
@@ -59,6 +85,7 @@ export function getFallbackAssignmentYear(yearId: string): AssignmentYearDetail 
         memberEmail: member.email,
         committeeId: assignment?.committeeId ?? "",
         committeeName: committee?.name ?? "未設定",
+        committeeMemberships,
         positionId: assignment?.positionId ?? "",
         positionName: position?.name ?? "未設定",
         role: assignment?.role ?? "member",

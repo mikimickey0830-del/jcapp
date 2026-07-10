@@ -7,10 +7,12 @@ import {
 import { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
 import type {
   AnnualMemberAssignmentView,
+  AssignmentCommitteeMembership,
   AssignmentFormOptions,
   AssignmentYearDetail,
   AssignmentYearSummary
 } from "@/types/assignment";
+import type { CommitteeMemberRole } from "@/types/committee";
 import type { AnnualRole } from "@/types/common";
 import type { Member, MemberStatus } from "@/types/member";
 
@@ -66,6 +68,17 @@ type AssignmentRow = {
   role: AnnualRole | null;
   is_board_member: boolean | null;
   is_active: boolean | null;
+};
+
+type CommitteeMembershipRow = {
+  id: string;
+  fiscal_year_id: string;
+  member_id: string;
+  committee_id: string;
+  role_in_committee: CommitteeMemberRole;
+  is_primary: boolean | null;
+  note: string | null;
+  deleted_at: string | null;
 };
 
 function firstRelation<T>(relation: SupabaseRelation<T>) {
@@ -191,6 +204,29 @@ async function fetchAssignments(yearId?: string) {
   return (data ?? []) as unknown as AssignmentRow[];
 }
 
+async function fetchCommitteeMemberships(yearId?: string) {
+  if (!supabase) {
+    return [];
+  }
+
+  let query = supabase
+    .from("committee_memberships")
+    .select("id, fiscal_year_id, member_id, committee_id, role_in_committee, is_primary, note, deleted_at")
+    .is("deleted_at", null);
+
+  if (yearId) {
+    query = query.eq("fiscal_year_id", yearId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as unknown as CommitteeMembershipRow[];
+}
+
 function toYearSummary(
   year: FiscalYearRow,
   memberCount: number,
@@ -211,21 +247,49 @@ function toYearSummary(
   };
 }
 
+function membershipView(
+  membership: CommitteeMembershipRow,
+  committeeById: Map<string, CommitteeRow>
+): AssignmentCommitteeMembership {
+  const committee = committeeById.get(membership.committee_id);
+
+  return {
+    id: membership.id,
+    committeeId: membership.committee_id,
+    committeeName: committee?.name ?? "未設定",
+    roleInCommittee: membership.role_in_committee,
+    isPrimary: Boolean(membership.is_primary),
+    note: membership.note ?? ""
+  };
+}
+
 function toAssignmentRows(
   year: FiscalYearRow,
   members: Member[],
   committees: CommitteeRow[],
   positions: PositionRow[],
-  assignments: AssignmentRow[]
+  assignments: AssignmentRow[],
+  committeeMemberships: CommitteeMembershipRow[]
 ): AnnualMemberAssignmentView[] {
   const committeeById = new Map(committees.map((committee) => [committee.id, committee]));
   const positionById = new Map(positions.map((position) => [position.id, position]));
   const assignmentByMemberId = new Map(assignments.map((assignment) => [assignment.member_id, assignment]));
+  const membershipsByMemberId = committeeMemberships.reduce<Map<string, AssignmentCommitteeMembership[]>>(
+    (accumulator, membership) => {
+      accumulator.set(membership.member_id, [
+        ...(accumulator.get(membership.member_id) ?? []),
+        membershipView(membership, committeeById)
+      ]);
+      return accumulator;
+    },
+    new Map()
+  );
 
   return members.map((member) => {
     const assignment = assignmentByMemberId.get(member.id);
-    const committee = assignment?.committee_id ? committeeById.get(assignment.committee_id) : undefined;
     const position = assignment?.position_id ? positionById.get(assignment.position_id) : undefined;
+    const memberships = membershipsByMemberId.get(member.id) ?? [];
+    const primaryMembership = memberships.find((membership) => membership.isPrimary) ?? memberships[0];
 
     return {
       id: assignment?.id ?? "",
@@ -236,8 +300,9 @@ function toAssignmentRows(
       memberName: `${member.lastName} ${member.firstName}`,
       memberKana: `${member.lastNameKana} ${member.firstNameKana}`,
       memberEmail: member.email,
-      committeeId: assignment?.committee_id ?? "",
-      committeeName: committee?.name ?? "未設定",
+      committeeId: primaryMembership?.committeeId ?? assignment?.committee_id ?? "",
+      committeeName: primaryMembership?.committeeName ?? "未設定",
+      committeeMemberships: memberships,
       positionId: assignment?.position_id ?? "",
       positionName: position?.name ?? "未設定",
       role: assignment?.role ?? "member",
@@ -296,12 +361,13 @@ async function fetchAssignmentYear(yearId: string): Promise<QueryResult<Assignme
   }
 
   try {
-    const [years, members, committees, positions, assignments] = await Promise.all([
+    const [years, members, committees, positions, assignments, committeeMemberships] = await Promise.all([
       fetchFiscalYears(),
       fetchMembers(),
       fetchCommittees(yearId),
       fetchPositions(yearId),
-      fetchAssignments(yearId)
+      fetchAssignments(yearId),
+      fetchCommitteeMemberships(yearId)
     ]);
     const year = years.find((item) => item.id === yearId || item.year === Number(yearId));
 
@@ -319,7 +385,7 @@ async function fetchAssignmentYear(yearId: string): Promise<QueryResult<Assignme
         fiscalYearName: year.name,
         fiscalYear: year.year,
         lomName: firstRelation(year.loms)?.name ?? "未設定",
-        rows: toAssignmentRows(year, members, committees, positions, assignments)
+        rows: toAssignmentRows(year, members, committees, positions, assignments, committeeMemberships)
       },
       error: null,
       source: "supabase"

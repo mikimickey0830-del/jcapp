@@ -1,5 +1,6 @@
 import { getCurrentAnnualProfile, getMember, members, roleLabels as fallbackRoleLabels, statusLabels } from "@/lib/members";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
+import type { CommitteeMemberRole } from "@/types/committee";
 import type { AnnualRole } from "@/types/common";
 import type { AnnualMemberProfile, Member, MemberStatus } from "@/types/member";
 
@@ -20,8 +21,16 @@ type SupabaseRelation<T> = T | T[] | null;
 type SupabaseAssignmentRow = {
   role: AnnualRole | null;
   fiscal_years: SupabaseRelation<{ year: number | null }>;
-  committees: SupabaseRelation<{ name: string | null }>;
   positions: SupabaseRelation<{ name: string | null }>;
+};
+
+type SupabaseCommitteeMembershipRow = {
+  role_in_committee: CommitteeMemberRole | null;
+  is_primary: boolean | null;
+  note: string | null;
+  deleted_at: string | null;
+  fiscal_years: SupabaseRelation<{ year: number | null }>;
+  committees: SupabaseRelation<{ name: string | null }>;
 };
 
 type SupabaseMemberRow = {
@@ -36,6 +45,7 @@ type SupabaseMemberRow = {
   status: MemberStatus;
   loms: SupabaseRelation<{ name: string | null }>;
   annual_member_assignments: SupabaseAssignmentRow[] | null;
+  committee_memberships: SupabaseCommitteeMembershipRow[] | null;
 };
 
 const memberSelect = `
@@ -52,8 +62,15 @@ const memberSelect = `
   annual_member_assignments(
     role,
     fiscal_years(year),
-    committees(name),
     positions(name)
+  ),
+  committee_memberships(
+    role_in_committee,
+    is_primary,
+    note,
+    deleted_at,
+    fiscal_years(year),
+    committees(name)
   )
 `;
 
@@ -69,22 +86,54 @@ function firstRelation<T>(relation: SupabaseRelation<T>) {
   return Array.isArray(relation) ? relation[0] : relation;
 }
 
-function toAnnualProfile(row: SupabaseAssignmentRow): AnnualMemberProfile | null {
+function membershipsByYear(rows: SupabaseCommitteeMembershipRow[] | null) {
+  return (rows ?? [])
+    .filter((row) => !row.deleted_at)
+    .reduce<Map<number, NonNullable<AnnualMemberProfile["committeeMemberships"]>>>((accumulator, row) => {
+      const fiscalYear = firstRelation(row.fiscal_years)?.year;
+
+      if (!fiscalYear) {
+        return accumulator;
+      }
+
+      accumulator.set(fiscalYear, [
+        ...(accumulator.get(fiscalYear) ?? []),
+        {
+          committeeName: firstRelation(row.committees)?.name ?? "未設定",
+          roleInCommittee: row.role_in_committee ?? "member",
+          isPrimary: Boolean(row.is_primary),
+          note: row.note ?? ""
+        }
+      ]);
+      return accumulator;
+    }, new Map());
+}
+
+function toAnnualProfile(
+  row: SupabaseAssignmentRow,
+  committeeMemberships: Map<number, NonNullable<AnnualMemberProfile["committeeMemberships"]>>
+): AnnualMemberProfile | null {
   const fiscalYear = firstRelation(row.fiscal_years)?.year;
 
   if (!fiscalYear) {
     return null;
   }
 
+  const memberships = committeeMemberships.get(fiscalYear) ?? [];
+  const primaryMembership = memberships.find((membership) => membership.isPrimary) ?? memberships[0];
+
   return {
     fiscalYear,
-    committee: firstRelation(row.committees)?.name ?? "未設定",
+    committee: primaryMembership?.committeeName ?? "未設定",
+    committeeMemberships: memberships,
     position: firstRelation(row.positions)?.name ?? "未設定",
     role: row.role ?? "member"
   };
 }
 
 function toMember(row: SupabaseMemberRow): Member {
+  const committeeMemberships = membershipsByYear(row.committee_memberships);
+
   return {
     id: row.id,
     lastName: row.last_name,
@@ -97,7 +146,7 @@ function toMember(row: SupabaseMemberRow): Member {
     joinedYear: row.joined_year,
     status: row.status,
     annualProfiles: (row.annual_member_assignments ?? [])
-      .map(toAnnualProfile)
+      .map((assignment) => toAnnualProfile(assignment, committeeMemberships))
       .filter((profile): profile is AnnualMemberProfile => Boolean(profile))
       .sort((a, b) => b.fiscalYear - a.fiscalYear)
   };

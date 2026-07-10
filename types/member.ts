@@ -1,10 +1,17 @@
 import type { AnnualRole } from "@/types/common";
+import type { CommitteeMemberRole } from "@/types/committee";
 
 export type MemberStatus = "active" | "inactive" | "graduated";
 
 export type AnnualMemberProfile = {
   fiscalYear: number;
   committee: string;
+  committeeMemberships?: Array<{
+    committeeName: string;
+    roleInCommittee: CommitteeMemberRole;
+    isPrimary: boolean;
+    note: string;
+  }>;
   position: string;
   role: AnnualRole;
 };

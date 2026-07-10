@@ -4,6 +4,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusPill } from "@/components/StatusPill";
+import { committeeRoleLabels } from "@/lib/assignments";
 import { assignmentService } from "@/services/assignmentService";
 
 export const dynamic = "force-dynamic";
@@ -18,12 +19,13 @@ export default async function AssignmentYearPage({ params }: { params: { yearId:
   }
 
   const activeCount = assignmentYear.rows.filter((row) => row.isActive).length;
+  const membershipCount = assignmentYear.rows.reduce((total, row) => total + row.committeeMemberships.length, 0);
 
   return (
     <AppShell>
       <PageHeader
         backHref="/assignments"
-        description="会員を選んで、この年度の所属委員会、役職、権限を編集します。"
+        description="会員ごとの年度基本役職・権限と、複数の委員会所属を管理します。"
         title={`${assignmentYear.fiscalYearName} 所属`}
       />
 
@@ -32,7 +34,7 @@ export default async function AssignmentYearPage({ params }: { params: { yearId:
       <section className="grid grid-cols-3 gap-3">
         <SummaryCard label="会員" value={String(assignmentYear.rows.length)} />
         <SummaryCard label="有効" value={String(activeCount)} />
-        <SummaryCard label="未設定" value={String(assignmentYear.rows.length - activeCount)} />
+        <SummaryCard label="委員会所属" value={String(membershipCount)} />
       </section>
 
       <section className="mt-5 space-y-3">
@@ -52,9 +54,26 @@ export default async function AssignmentYearPage({ params }: { params: { yearId:
             </div>
 
             <div className="mt-3 grid gap-2 rounded-md bg-slate-50 p-3 text-sm">
-              <InfoLine label="委員会" value={row.committeeName} />
-              <InfoLine label="役職" value={row.positionName} />
+              <InfoLine label="年度役職" value={row.positionName} />
               <InfoLine label="権限" value={assignmentService.roleLabels[row.role]} />
+              <InfoLine label="主所属" value={row.committeeName} />
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              {row.committeeMemberships.length > 0 ? (
+                row.committeeMemberships.map((membership) => (
+                  <span
+                    className="rounded-full bg-jc-sky px-3 py-1 text-xs font-bold text-jc-blue"
+                    key={membership.id || membership.committeeId}
+                  >
+                    {membership.committeeName} / {committeeRoleLabels[membership.roleInCommittee]}
+                  </span>
+                ))
+              ) : (
+                <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+                  委員会未設定
+                </span>
+              )}
             </div>
           </Link>
         ))}
@@ -86,7 +105,7 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
 
 function InfoLine({ label, value }: { label: string; value: string }) {
   return (
-    <p className="grid grid-cols-[64px_1fr] gap-2">
+    <p className="grid grid-cols-[72px_1fr] gap-2">
       <span className="font-semibold text-slate-500">{label}</span>
       <span className="min-w-0 break-words font-bold text-jc-navy">{value}</span>
     </p>

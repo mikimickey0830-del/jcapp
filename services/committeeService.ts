@@ -8,7 +8,6 @@ import type {
   CommitteeMember,
   CommitteeMemberRole
 } from "@/types/committee";
-import type { AnnualRole } from "@/types/common";
 import type { Member, MemberStatus } from "@/types/member";
 
 type CommitteeQueryResult = {
@@ -49,11 +48,14 @@ type CommitteeRow = {
   }>;
 };
 
-type AssignmentRow = {
-  committee_id: string | null;
+type CommitteeMembershipRow = {
+  id: string;
+  committee_id: string;
   member_id: string;
-  role: AnnualRole | null;
-  is_active?: boolean | null;
+  role_in_committee: CommitteeMemberRole;
+  is_primary: boolean | null;
+  note: string | null;
+  deleted_at: string | null;
 };
 
 type MemberRow = {
@@ -109,56 +111,39 @@ function toMember(row: MemberRow): Member {
   };
 }
 
-function memberRole(memberId: string, committee: CommitteeRow, assignment?: AssignmentRow): CommitteeMemberRole {
-  if (memberId === committee.vice_president_member_id) {
-    return "vice_president";
+function toCommitteeMember(
+  membership: CommitteeMembershipRow,
+  membersById: Map<string, Member>
+): CommitteeMember | null {
+  const member = membersById.get(membership.member_id);
+
+  if (!member) {
+    return null;
   }
 
-  if (memberId === committee.chair_member_id || assignment?.role === "chair") {
-    return "chair";
-  }
-
-  if (memberId === committee.vice_chair_member_id || assignment?.role === "vice_chair") {
-    return "vice_chair";
-  }
-
-  return "member";
+  return {
+    id: member.id,
+    lastName: member.lastName,
+    firstName: member.firstName,
+    lastNameKana: member.lastNameKana,
+    firstNameKana: member.firstNameKana,
+    email: member.email,
+    role: membership.role_in_committee,
+    isPrimary: Boolean(membership.is_primary),
+    note: membership.note ?? ""
+  };
 }
 
 function toCommitteeDetail(
   row: CommitteeRow,
   membersById: Map<string, Member>,
-  assignmentsByCommittee: Map<string, AssignmentRow[]>
+  membershipsByCommittee: Map<string, CommitteeMembershipRow[]>
 ): CommitteeDetail {
   const fiscalYear = firstRelation(row.fiscal_years);
   const lomName = firstRelation(fiscalYear?.loms ?? null)?.name ?? "未設定";
-  const assignments = assignmentsByCommittee.get(row.id) ?? [];
-  const selectedMemberIds = new Set([
-    ...assignments.map((assignment) => assignment.member_id),
-    row.vice_president_member_id,
-    row.chair_member_id,
-    row.vice_chair_member_id
-  ].filter((memberId): memberId is string => Boolean(memberId)));
-
-  const committeeMembers: CommitteeMember[] = Array.from(selectedMemberIds)
-    .map((memberId) => {
-      const member = membersById.get(memberId);
-
-      if (!member) {
-        return null;
-      }
-
-      const assignment = assignments.find((item) => item.member_id === memberId);
-      return {
-        id: member.id,
-        lastName: member.lastName,
-        firstName: member.firstName,
-        lastNameKana: member.lastNameKana,
-        firstNameKana: member.firstNameKana,
-        email: member.email,
-        role: memberRole(memberId, row, assignment)
-      };
-    })
+  const memberships = membershipsByCommittee.get(row.id) ?? [];
+  const members = memberships
+    .map((membership) => toCommitteeMember(membership, membersById))
     .filter((member): member is CommitteeMember => Boolean(member));
 
   return {
@@ -172,8 +157,8 @@ function toCommitteeDetail(
     vicePresidentMemberId: row.vice_president_member_id ?? "",
     chairMemberId: row.chair_member_id ?? "",
     viceChairMemberId: row.vice_chair_member_id ?? "",
-    memberIds: Array.from(selectedMemberIds),
-    members: committeeMembers,
+    memberIds: members.map((member) => member.id),
+    members,
     sortOrder: row.sort_order ?? 0,
     deletedAt: row.deleted_at
   };
@@ -214,21 +199,21 @@ async function fetchCommitteeRows() {
   return (data ?? []) as unknown as CommitteeRow[];
 }
 
-async function fetchAssignments() {
+async function fetchCommitteeMemberships() {
   if (!supabase) {
     return [];
   }
 
   const { data, error } = await supabase
-    .from("annual_member_assignments")
-    .select("committee_id, member_id, role, is_active")
-    .not("committee_id", "is", null);
+    .from("committee_memberships")
+    .select("id, committee_id, member_id, role_in_committee, is_primary, note, deleted_at")
+    .is("deleted_at", null);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return (data ?? []) as unknown as AssignmentRow[];
+  return (data ?? []) as unknown as CommitteeMembershipRow[];
 }
 
 async function fetchCommitteeOptions(): Promise<CommitteeOptionsResult> {
@@ -303,23 +288,25 @@ async function fetchCommittees(): Promise<CommitteeQueryResult> {
   }
 
   try {
-    const [committeeRows, members, assignmentRows] = await Promise.all([
+    const [committeeRows, members, memberships] = await Promise.all([
       fetchCommitteeRows(),
       fetchMembers(),
-      fetchAssignments()
+      fetchCommitteeMemberships()
     ]);
     const membersById = new Map(members.map((member) => [member.id, member]));
-    const assignmentsByCommittee = assignmentRows.reduce<Map<string, AssignmentRow[]>>((accumulator, assignment) => {
-      if (!assignment.committee_id || assignment.is_active === false) {
+    const membershipsByCommittee = memberships.reduce<Map<string, CommitteeMembershipRow[]>>(
+      (accumulator, membership) => {
+        accumulator.set(membership.committee_id, [
+          ...(accumulator.get(membership.committee_id) ?? []),
+          membership
+        ]);
         return accumulator;
-      }
-
-      accumulator.set(assignment.committee_id, [...(accumulator.get(assignment.committee_id) ?? []), assignment]);
-      return accumulator;
-    }, new Map());
+      },
+      new Map()
+    );
 
     return {
-      data: committeeRows.map((row) => toCommitteeDetail(row, membersById, assignmentsByCommittee)),
+      data: committeeRows.map((row) => toCommitteeDetail(row, membersById, membershipsByCommittee)),
       error: null,
       source: "supabase"
     };

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
-import type { CommitteeMutationPayload } from "@/types/committee";
-import type { AnnualRole } from "@/types/common";
+import type { CommitteeMemberRole, CommitteeMutationPayload } from "@/types/committee";
 
 function uniqueMemberIds(body: CommitteeMutationPayload) {
   return [
@@ -12,8 +11,8 @@ function uniqueMemberIds(body: CommitteeMutationPayload) {
   ].filter((memberId): memberId is string => Boolean(memberId));
 }
 
-function validateCommitteeInput(body: CommitteeMutationPayload, requireFiscalYear = true) {
-  if (requireFiscalYear && !body.fiscalYearId) {
+function validateCommitteeInput(body: CommitteeMutationPayload) {
+  if (!body.fiscalYearId) {
     return "年度を選択してください。";
   }
 
@@ -24,7 +23,7 @@ function validateCommitteeInput(body: CommitteeMutationPayload, requireFiscalYea
   return null;
 }
 
-function roleForMember(memberId: string, body: CommitteeMutationPayload): AnnualRole {
+function roleForMember(memberId: string, body: CommitteeMutationPayload): CommitteeMemberRole {
   if (memberId === body.chairMemberId) {
     return "chair";
   }
@@ -36,7 +35,7 @@ function roleForMember(memberId: string, body: CommitteeMutationPayload): Annual
   return "member";
 }
 
-async function syncAssignments(committeeId: string, fiscalYearId: string, body: CommitteeMutationPayload) {
+async function syncCommitteeMemberships(committeeId: string, fiscalYearId: string, body: CommitteeMutationPayload) {
   const client = supabase;
 
   if (!client) {
@@ -56,43 +55,51 @@ async function syncAssignments(committeeId: string, fiscalYearId: string, body: 
   }
 
   const { data: existingRows, error: existingError } = await client
-    .from("annual_member_assignments")
-    .select("member_id")
+    .from("committee_memberships")
+    .select("id, member_id")
     .eq("fiscal_year_id", fiscalYearId)
-    .eq("committee_id", committeeId);
+    .eq("committee_id", committeeId)
+    .is("deleted_at", null);
 
   if (existingError) {
     throw new Error(existingError.message);
   }
 
-  const removedMemberIds = ((existingRows ?? []) as Array<{ member_id: string }>)
-    .map((row) => row.member_id)
-    .filter((memberId) => !selectedMemberIds.includes(memberId));
-
-  await Promise.all(
-    removedMemberIds.map((memberId) =>
-      client
-        .from("annual_member_assignments")
-        .update({ committee_id: null, role: "member" })
-        .eq("fiscal_year_id", fiscalYearId)
-        .eq("member_id", memberId)
-    )
+  const removedRows = ((existingRows ?? []) as Array<{ id: string; member_id: string }>).filter(
+    (row) => !selectedMemberIds.includes(row.member_id)
   );
+
+  if (removedRows.length > 0) {
+    const { error: removeError } = await client
+      .from("committee_memberships")
+      .update({ deleted_at: new Date().toISOString() })
+      .in(
+        "id",
+        removedRows.map((row) => row.id)
+      );
+
+    if (removeError) {
+      throw new Error(removeError.message);
+    }
+  }
 
   if (selectedMemberIds.length === 0) {
     return;
   }
 
-  const { error: upsertError } = await client.from("annual_member_assignments").upsert(
+  const { error: upsertError } = await client.from("committee_memberships").upsert(
     selectedMemberIds.map((memberId) => ({
       lom_id: fiscalYear.lom_id,
       fiscal_year_id: fiscalYearId,
       member_id: memberId,
       committee_id: committeeId,
-      role: roleForMember(memberId, body),
-      is_board_member: memberId === body.chairMemberId
+      role_in_committee: roleForMember(memberId, body),
+      is_primary: memberId === body.chairMemberId,
+      note: "",
+      deleted_at: null,
+      updated_at: new Date().toISOString()
     })),
-    { onConflict: "fiscal_year_id,member_id" }
+    { onConflict: "fiscal_year_id,member_id,committee_id" }
   );
 
   if (upsertError) {
@@ -151,10 +158,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    await syncAssignments(data.id, body.fiscalYearId, body);
+    await syncCommitteeMemberships(data.id, body.fiscalYearId, body);
   } catch (syncError) {
     return NextResponse.json(
-      { error: syncError instanceof Error ? syncError.message : "委員の紐付けに失敗しました。" },
+      { error: syncError instanceof Error ? syncError.message : "委員会所属の保存に失敗しました。" },
       { status: 500 }
     );
   }

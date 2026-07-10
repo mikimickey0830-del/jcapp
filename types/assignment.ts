@@ -1,5 +1,6 @@
 import type { AnnualRole } from "@/types/common";
 import type { Member } from "@/types/member";
+import type { CommitteeMemberRole } from "@/types/committee";
 
 export type AssignmentStatus = "active" | "inactive";
 
@@ -25,11 +26,21 @@ export type AnnualMemberAssignmentView = {
   memberEmail: string;
   committeeId: string;
   committeeName: string;
+  committeeMemberships: AssignmentCommitteeMembership[];
   positionId: string;
   positionName: string;
   role: AnnualRole;
   isBoardMember: boolean;
   isActive: boolean;
+};
+
+export type AssignmentCommitteeMembership = {
+  id: string;
+  committeeId: string;
+  committeeName: string;
+  roleInCommittee: CommitteeMemberRole;
+  isPrimary: boolean;
+  note: string;
 };
 
 export type AssignmentYearDetail = {
@@ -59,9 +70,16 @@ export type AssignmentFormOptions = {
 };
 
 export type AssignmentMutationPayload = {
-  committeeId?: string;
   positionId?: string;
   role?: AnnualRole;
   isBoardMember?: boolean;
   isActive?: boolean;
+  committeeMemberships?: Array<{
+    id?: string;
+    committeeId?: string;
+    roleInCommittee?: CommitteeMemberRole;
+    isPrimary?: boolean;
+    note?: string;
+    deleted?: boolean;
+  }>;
 };

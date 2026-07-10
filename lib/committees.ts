@@ -1,4 +1,5 @@
 import { members } from "@/lib/members";
+import type { CommitteeMember } from "@/types/committee";
 import { fiscalYears } from "@/lib/years";
 import type { CommitteeDetail } from "@/types/committee";
 import type { Committee } from "@/types/year";
@@ -28,7 +29,7 @@ function toCommitteeDetail(committee: Committee, fiscalYearId: string): Committe
     viceChairMemberId,
     memberIds,
     members: assignments
-      .map((assignment) => {
+      .map((assignment): CommitteeMember | null => {
         const member = memberById(assignment.memberId);
 
         if (!member) {
@@ -49,10 +50,12 @@ function toCommitteeDetail(committee: Committee, fiscalYearId: string): Committe
                 ? "chair"
                 : assignment.memberId === viceChairMemberId
                   ? "vice_chair"
-                  : "member"
-        } as const;
+                  : "member",
+          isPrimary: true,
+          note: ""
+        };
       })
-      .filter((member): member is CommitteeDetail["members"][number] => Boolean(member)),
+      .filter((member): member is CommitteeMember => Boolean(member)),
     sortOrder: committee.sortOrder,
     deletedAt: null
   };

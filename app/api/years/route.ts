@@ -48,6 +48,15 @@ type AssignmentCopyRow = {
   is_board_member: boolean;
 };
 
+type CommitteeMembershipCopyRow = {
+  lom_id: string;
+  member_id: string;
+  committee_id: string;
+  role_in_committee: "chair" | "vice_chair" | "member" | "observer" | "advisor";
+  is_primary: boolean;
+  note: string | null;
+};
+
 function isDateLike(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
@@ -181,6 +190,49 @@ async function copyAssignments(
   }
 }
 
+async function copyCommitteeMemberships(
+  sourceFiscalYearId: string,
+  newFiscalYearId: string,
+  committeeIdMap: Map<string, string>
+) {
+  if (!supabase) {
+    return;
+  }
+
+  const { data: sourceRows, error: sourceError } = await supabase
+    .from("committee_memberships")
+    .select("lom_id, member_id, committee_id, role_in_committee, is_primary, note")
+    .eq("fiscal_year_id", sourceFiscalYearId)
+    .is("deleted_at", null);
+
+  if (sourceError) {
+    throw new Error(`委員会所属コピー元を取得できませんでした。${sourceError.message}`);
+  }
+
+  const rows = (sourceRows ?? []) as unknown as CommitteeMembershipCopyRow[];
+  const insertRows = rows
+    .map((row) => ({
+      lom_id: row.lom_id,
+      fiscal_year_id: newFiscalYearId,
+      member_id: row.member_id,
+      committee_id: committeeIdMap.get(row.committee_id) ?? "",
+      role_in_committee: row.role_in_committee,
+      is_primary: row.is_primary,
+      note: row.note ?? ""
+    }))
+    .filter((row) => row.committee_id);
+
+  if (insertRows.length === 0) {
+    return;
+  }
+
+  const { error: insertError } = await supabase.from("committee_memberships").insert(insertRows);
+
+  if (insertError) {
+    throw new Error(`委員会所属をコピーできませんでした。${insertError.message}`);
+  }
+}
+
 export async function POST(request: Request) {
   if (!isSupabaseConfigured || !supabase) {
     return NextResponse.json({ error: "Supabase環境変数が未設定です。" }, { status: 500 });
@@ -255,6 +307,7 @@ export async function POST(request: Request) {
 
       if (payload.copyAssignments) {
         await copyAssignments(payload.copyFromFiscalYearId, newFiscalYear.id, committeeIdMap, positionIdMap);
+        await copyCommitteeMemberships(payload.copyFromFiscalYearId, newFiscalYear.id, committeeIdMap);
       }
     }
   } catch (error) {

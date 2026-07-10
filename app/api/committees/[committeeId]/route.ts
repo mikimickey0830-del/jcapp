@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
-import type { CommitteeMutationPayload } from "@/types/committee";
-import type { AnnualRole } from "@/types/common";
+import type { CommitteeMemberRole, CommitteeMutationPayload } from "@/types/committee";
 
 function uniqueMemberIds(body: CommitteeMutationPayload) {
   return [
@@ -12,7 +11,7 @@ function uniqueMemberIds(body: CommitteeMutationPayload) {
   ].filter((memberId): memberId is string => Boolean(memberId));
 }
 
-function roleForMember(memberId: string, body: CommitteeMutationPayload): AnnualRole {
+function roleForMember(memberId: string, body: CommitteeMutationPayload): CommitteeMemberRole {
   if (memberId === body.chairMemberId) {
     return "chair";
   }
@@ -32,7 +31,7 @@ function validateCommitteeInput(body: CommitteeMutationPayload) {
   return null;
 }
 
-async function syncAssignments(committeeId: string, fiscalYearId: string, body: CommitteeMutationPayload) {
+async function syncCommitteeMemberships(committeeId: string, fiscalYearId: string, body: CommitteeMutationPayload) {
   const client = supabase;
 
   if (!client) {
@@ -52,43 +51,51 @@ async function syncAssignments(committeeId: string, fiscalYearId: string, body: 
   }
 
   const { data: existingRows, error: existingError } = await client
-    .from("annual_member_assignments")
-    .select("member_id")
+    .from("committee_memberships")
+    .select("id, member_id")
     .eq("fiscal_year_id", fiscalYearId)
-    .eq("committee_id", committeeId);
+    .eq("committee_id", committeeId)
+    .is("deleted_at", null);
 
   if (existingError) {
     throw new Error(existingError.message);
   }
 
-  const removedMemberIds = ((existingRows ?? []) as Array<{ member_id: string }>)
-    .map((row) => row.member_id)
-    .filter((memberId) => !selectedMemberIds.includes(memberId));
-
-  await Promise.all(
-    removedMemberIds.map((memberId) =>
-      client
-        .from("annual_member_assignments")
-        .update({ committee_id: null, role: "member" })
-        .eq("fiscal_year_id", fiscalYearId)
-        .eq("member_id", memberId)
-    )
+  const removedRows = ((existingRows ?? []) as Array<{ id: string; member_id: string }>).filter(
+    (row) => !selectedMemberIds.includes(row.member_id)
   );
+
+  if (removedRows.length > 0) {
+    const { error: removeError } = await client
+      .from("committee_memberships")
+      .update({ deleted_at: new Date().toISOString() })
+      .in(
+        "id",
+        removedRows.map((row) => row.id)
+      );
+
+    if (removeError) {
+      throw new Error(removeError.message);
+    }
+  }
 
   if (selectedMemberIds.length === 0) {
     return;
   }
 
-  const { error: upsertError } = await client.from("annual_member_assignments").upsert(
+  const { error: upsertError } = await client.from("committee_memberships").upsert(
     selectedMemberIds.map((memberId) => ({
       lom_id: committee.lom_id,
       fiscal_year_id: fiscalYearId,
       member_id: memberId,
       committee_id: committeeId,
-      role: roleForMember(memberId, body),
-      is_board_member: memberId === body.chairMemberId
+      role_in_committee: roleForMember(memberId, body),
+      is_primary: memberId === body.chairMemberId,
+      note: "",
+      deleted_at: null,
+      updated_at: new Date().toISOString()
     })),
-    { onConflict: "fiscal_year_id,member_id" }
+    { onConflict: "fiscal_year_id,member_id,committee_id" }
   );
 
   if (upsertError) {
@@ -137,10 +144,10 @@ export async function PATCH(request: Request, { params }: { params: { committeeI
   }
 
   try {
-    await syncAssignments(params.committeeId, fiscalYearId, body);
+    await syncCommitteeMemberships(params.committeeId, fiscalYearId, body);
   } catch (syncError) {
     return NextResponse.json(
-      { error: syncError instanceof Error ? syncError.message : "委員の紐付けに失敗しました。" },
+      { error: syncError instanceof Error ? syncError.message : "委員会所属の保存に失敗しました。" },
       { status: 500 }
     );
   }
@@ -153,10 +160,13 @@ export async function DELETE(_request: Request, { params }: { params: { committe
     return NextResponse.json({ error: "Supabase環境変数が未設定です。" }, { status: 500 });
   }
 
-  const { error } = await supabase
-    .from("committees")
-    .update({ deleted_at: new Date().toISOString() })
-    .eq("id", params.committeeId);
+  const deletedAt = new Date().toISOString();
+  const [committeeResult, membershipResult] = await Promise.all([
+    supabase.from("committees").update({ deleted_at: deletedAt }).eq("id", params.committeeId),
+    supabase.from("committee_memberships").update({ deleted_at: deletedAt }).eq("committee_id", params.committeeId)
+  ]);
+
+  const error = committeeResult.error ?? membershipResult.error;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

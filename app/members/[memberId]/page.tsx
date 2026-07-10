@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusPill } from "@/components/StatusPill";
+import { committeeRoleLabels } from "@/lib/assignments";
 import { memberService } from "@/services/memberService";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +30,7 @@ export default async function MemberDetailPage({ params }: { params: { memberId:
       <PageHeader
         action={{ href: `/members/${member.id}/edit`, label: "編集" }}
         backHref="/members"
-        description="会員基本情報と年度別情報を分けて確認できます。役職、委員会、権限は年度ごとに管理します。"
+        description="会員基本情報と、年度ごとの役職・権限・複数委員会所属を確認します。"
         title={`${member.lastName} ${member.firstName}`}
       />
 
@@ -59,7 +60,7 @@ export default async function MemberDetailPage({ params }: { params: { memberId:
       <section className="mt-5">
         <h2 className="text-lg font-bold text-jc-navy">年度別情報</h2>
         <p className="mt-1 text-sm leading-6 text-slate-600">
-          役職、委員会、権限は年度ごとに管理します。新年度作成時は前年度コピーの対象になります。
+          会員基本情報は共通のまま、年度ごとの役職・権限と委員会兼任を管理します。
         </p>
         <div className="mt-3 space-y-3">
           {member.annualProfiles.map((profile) => (
@@ -69,9 +70,27 @@ export default async function MemberDetailPage({ params }: { params: { memberId:
                 <StatusPill label={roleLabels[profile.role]} />
               </div>
               <dl className="mt-3 grid gap-2 text-sm">
-                <InfoRow label="委員会" value={profile.committee} />
-                <InfoRow label="役職" value={profile.position} />
+                <InfoRow label="主所属" value={profile.committee} />
+                <InfoRow label="年度役職" value={profile.position} />
               </dl>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {profile.committeeMemberships && profile.committeeMemberships.length > 0 ? (
+                  profile.committeeMemberships.map((membership) => (
+                    <span
+                      className="rounded-full bg-jc-sky px-3 py-1 text-xs font-bold text-jc-blue"
+                      key={`${profile.fiscalYear}-${membership.committeeName}-${membership.roleInCommittee}`}
+                    >
+                      {membership.committeeName} / {committeeRoleLabels[membership.roleInCommittee]}
+                      {membership.isPrimary ? " / 主" : ""}
+                    </span>
+                  ))
+                ) : (
+                  <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+                    委員会未設定
+                  </span>
+                )}
+              </div>
             </article>
           ))}
         </div>
