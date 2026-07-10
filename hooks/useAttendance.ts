@@ -2,15 +2,15 @@ import { attendanceService } from "@/services/attendanceService";
 
 export function useAttendance() {
   return {
-    attendanceEvents: attendanceService.getAttendanceEvents(),
-    getAttendanceSummary: attendanceService.getAttendanceSummary
+    attendanceEvents: attendanceService.getFallbackAttendanceEvents(),
+    getAttendanceSummary: attendanceService.getFallbackAttendanceSummary
   };
 }
 
 export function useAttendanceEvent(eventId: string) {
   return {
-    rows: attendanceService.getAttendanceRows(eventId),
-    summary: attendanceService.getAttendanceSummary(eventId),
+    rows: attendanceService.getFallbackAttendanceRows(eventId),
+    summary: attendanceService.getFallbackAttendanceSummary(eventId),
     attendanceStatusLabels: attendanceService.attendanceStatusLabels,
     attendanceStatusTones: attendanceService.attendanceStatusTones
   };

@@ -4,11 +4,16 @@ import { AppShell } from "@/components/AppShell";
 import { EventDeleteButton } from "@/components/EventDeleteButton";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusPill } from "@/components/StatusPill";
+import { attendanceService } from "@/services/attendanceService";
 import { scheduleService } from "@/services/scheduleService";
 
 export default async function ScheduleEventDetailPage({ params }: { params: { eventId: string } }) {
-  const result = await scheduleService.getEventById(params.eventId);
-  const event = result.data;
+  const [eventResult, attendanceResult] = await Promise.all([
+    scheduleService.getEventById(params.eventId),
+    attendanceService.getAttendanceDetail(params.eventId)
+  ]);
+  const event = eventResult.data;
+  const attendance = attendanceResult.data;
 
   if (!event) {
     notFound();
@@ -22,7 +27,7 @@ export default async function ScheduleEventDetailPage({ params }: { params: { ev
         description="イベント情報、対象者、運営情報、出欠設定を確認します。"
         title={event.title}
       />
-      <DataSourceNotice error={result.error} source={result.source} />
+      <DataSourceNotice error={eventResult.error ?? attendanceResult.error} source={eventResult.source} />
 
       <section className="rounded-md border border-jc-line bg-white p-4 shadow-sm">
         <div className="flex items-start justify-between gap-3">
@@ -53,6 +58,29 @@ export default async function ScheduleEventDetailPage({ params }: { params: { ev
           </a>
         ) : null}
       </section>
+
+      {attendance ? (
+        <section className="mt-5 rounded-md border border-jc-line bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-base font-bold text-jc-navy">出欠状況</h2>
+            <StatusPill
+              label={attendance.summary.isDeadlineOver ? "期限切れ" : "期限内"}
+              tone={attendance.summary.isDeadlineOver ? "red" : "green"}
+            />
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            <MiniStat label="回答率" value={`${attendance.summary.responseRate}%`} />
+            <MiniStat label="未回答" value={String(attendance.summary.unanswered)} />
+            <MiniStat label="期限" value={event.attendanceDeadline ?? "未設定"} />
+          </div>
+          <Link
+            className="mt-4 flex min-h-11 items-center justify-center rounded-md bg-jc-navy px-4 text-sm font-bold text-white"
+            href={`/attendance/${event.id}`}
+          >
+            出欠状況を見る
+          </Link>
+        </section>
+      ) : null}
 
       <section className="mt-5 rounded-md border border-jc-line bg-white p-4 shadow-sm">
         <h2 className="text-base font-bold text-jc-navy">対象設定</h2>
@@ -89,14 +117,6 @@ export default async function ScheduleEventDetailPage({ params }: { params: { ev
           <InfoRow label="締切通知" value={event.reminderAt ? event.reminderAt.replace("T", " ").slice(0, 16) : "未設定"} />
           <InfoRow label="Google ID" value={event.googleCalendarEventId || "未設定"} />
         </dl>
-        {event.requiresAttendance ? (
-          <Link
-            className="mt-4 flex min-h-11 items-center justify-center rounded-md bg-jc-navy px-4 text-sm font-bold text-white"
-            href={`/attendance/${event.id}`}
-          >
-            出欠状況を見る
-          </Link>
-        ) : null}
       </section>
 
       <Link
@@ -107,6 +127,15 @@ export default async function ScheduleEventDetailPage({ params }: { params: { ev
       </Link>
       <EventDeleteButton eventId={event.id} />
     </AppShell>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md bg-slate-50 p-2 text-center">
+      <p className="text-base font-bold text-jc-blue">{value}</p>
+      <p className="mt-0.5 text-[11px] font-semibold text-slate-500">{label}</p>
+    </div>
   );
 }
 

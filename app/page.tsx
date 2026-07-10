@@ -6,13 +6,16 @@ import { attendanceService } from "@/services/attendanceService";
 import { documentService } from "@/services/documentService";
 import { notificationService } from "@/services/notificationService";
 import { scheduleService } from "@/services/scheduleService";
+import type { ScheduleEvent } from "@/types/schedule";
 
 export default async function HomePage() {
-  const scheduleResult = await scheduleService.getEvents();
+  const [scheduleResult, attendanceDashboard] = await Promise.all([
+    scheduleService.getEvents(),
+    attendanceService.getAttendanceDashboard()
+  ]);
   const events = scheduleResult.data;
   const todayEvents = scheduleService.getTodayEvents(events);
   const thisWeekEvents = scheduleService.getThisWeekEvents(events).slice(0, 5);
-  const unansweredAttendance = attendanceService.getUnansweredAttendanceForMember("m004");
   const latestAnnouncements = announcementService.getLatestAnnouncements(3);
   const newDocuments = documentService.getNewDocuments(3);
   const latestNotifications = notificationService.getLatestNotifications(3);
@@ -39,16 +42,41 @@ export default async function HomePage() {
         </div>
       </header>
 
-      {scheduleResult.error ? (
+      {scheduleResult.error || attendanceDashboard.error ? (
         <section className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-800">
-          {scheduleResult.error}
+          {attendanceDashboard.error ?? scheduleResult.error}
         </section>
       ) : null}
 
       <section className="mt-5 grid grid-cols-3 gap-3">
-        <SummaryCard label="未回答" value={String(unansweredAttendance.length)} tone="red" />
-        <SummaryCard label="今日" value={String(todayEvents.length)} tone="blue" />
-        <SummaryCard label="新着資料" value={String(newDocuments.length)} tone="green" />
+        <SummaryCard label="未回答" value={String(attendanceDashboard.data.unansweredItems.length)} tone="red" />
+        <SummaryCard label="今日締切" value={String(attendanceDashboard.data.dueTodayItems.length)} tone="blue" />
+        <SummaryCard label="今週締切" value={String(attendanceDashboard.data.dueThisWeekItems.length)} tone="green" />
+      </section>
+
+      <section className="mt-6" id="attendance-alerts">
+        <SectionTitle actionHref="/attendance" actionLabel="出欠へ" title="未回答の出欠" />
+        <div className="mt-3 space-y-3">
+          {attendanceDashboard.data.unansweredItems.slice(0, 3).map(({ event, row, isOverdue }) => (
+            <Link
+              className="block rounded-md border border-jc-line bg-white p-4 shadow-sm"
+              href={`/attendance/${event.id}/respond`}
+              key={`${event.id}-${row.memberId}`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="font-bold text-slate-900">{event.title}</h2>
+                  <p className="mt-1 text-sm text-slate-600">返信期限: {row.replyDeadline ?? event.attendanceDeadline ?? "未設定"}</p>
+                  <p className="mt-1 truncate text-xs text-slate-500">{row.memberName}</p>
+                </div>
+                <StatusPill label={isOverdue ? "期限切れ" : "未回答"} tone={isOverdue ? "red" : "amber"} />
+              </div>
+            </Link>
+          ))}
+          {attendanceDashboard.data.unansweredItems.length === 0 ? (
+            <p className="rounded-md border border-jc-line bg-white p-4 text-sm text-slate-500">未回答の出欠はありません。</p>
+          ) : null}
+        </div>
       </section>
 
       <section className="mt-6" id="today-schedule">
@@ -59,27 +87,6 @@ export default async function HomePage() {
       <section className="mt-6" id="week-schedule">
         <SectionTitle actionHref="/schedule" actionLabel="一覧" title="今週の予定" />
         <EventList events={thisWeekEvents} emptyText="今週の予定はありません。" />
-      </section>
-
-      <section className="mt-6">
-        <SectionTitle actionHref="/attendance" actionLabel="回答" title="未回答の出欠" />
-        <div className="mt-3 space-y-3">
-          {unansweredAttendance.slice(0, 3).map(({ event, isOverdue }) => (
-            <Link
-              className="block rounded-md border border-jc-line bg-white p-4 shadow-sm"
-              href={`/attendance/${event.id}/respond`}
-              key={event.id}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="font-bold text-slate-900">{event.title}</h2>
-                  <p className="mt-1 text-sm text-slate-600">返信期限: {event.attendanceDeadline}</p>
-                </div>
-                <StatusPill label={isOverdue ? "期限切れ" : "未回答"} tone={isOverdue ? "red" : "amber"} />
-              </div>
-            </Link>
-          ))}
-        </div>
       </section>
 
       <section className="mt-6" id="documents">
@@ -138,7 +145,7 @@ export default async function HomePage() {
   );
 }
 
-function EventList({ events, emptyText }: { events: Awaited<ReturnType<typeof scheduleService.getEvents>>["data"]; emptyText: string }) {
+function EventList({ events, emptyText }: { events: ScheduleEvent[]; emptyText: string }) {
   return (
     <div className="mt-3 space-y-3">
       {events.length > 0 ? (

@@ -1,12 +1,19 @@
 import { members } from "@/lib/members";
 import { getScheduleEvent, scheduleEvents } from "@/lib/schedule";
-import type { AttendanceResponse, AttendanceStatus } from "@/types/attendance";
+import type { AttendanceResponse, AttendanceRow, AttendanceStatus, AttendanceSummary } from "@/types/attendance";
 
 export const attendanceStatusLabels: Record<AttendanceStatus, string> = {
   attending: "出席",
   absent: "欠席",
   late: "遅刻",
   unanswered: "未回答"
+};
+
+export const attendanceStatusSymbols: Record<AttendanceStatus, string> = {
+  attending: "○",
+  late: "△",
+  absent: "×",
+  unanswered: "-"
 };
 
 export const attendanceStatusTones: Record<AttendanceStatus, "blue" | "green" | "amber" | "red"> = {
@@ -18,111 +25,47 @@ export const attendanceStatusTones: Record<AttendanceStatus, "blue" | "green" | 
 
 export const attendanceResponses: AttendanceResponse[] = [
   {
-    eventId: "e001",
+    id: "fallback-att-001",
+    eventId: "60000000-0000-0000-0000-000000000001",
     memberId: "m001",
     status: "attending",
     comment: "参加します。",
-    respondedAt: "2026-07-05 09:20"
+    respondedAt: "2026-07-05 09:20",
+    replyDeadline: "2026-07-08",
+    isOverdue: false
   },
   {
-    eventId: "e001",
+    id: "fallback-att-002",
+    eventId: "60000000-0000-0000-0000-000000000001",
     memberId: "m002",
     status: "late",
     comment: "仕事のため20分ほど遅れます。",
-    respondedAt: "2026-07-06 18:10"
+    respondedAt: "2026-07-06 18:10",
+    replyDeadline: "2026-07-08",
+    isOverdue: false
   },
   {
-    eventId: "e001",
+    id: "fallback-att-003",
+    eventId: "60000000-0000-0000-0000-000000000001",
     memberId: "m003",
     status: "absent",
     comment: "所用のため欠席します。",
-    respondedAt: "2026-07-07 12:05"
+    respondedAt: "2026-07-07 12:05",
+    replyDeadline: "2026-07-08",
+    isOverdue: false
   },
   {
-    eventId: "e001",
+    id: "fallback-att-004",
+    eventId: "60000000-0000-0000-0000-000000000001",
     memberId: "m004",
     status: "unanswered",
-    comment: ""
-  },
-  {
-    eventId: "e002",
-    memberId: "m001",
-    status: "attending",
     comment: "",
-    respondedAt: "2026-07-10 08:30"
-  },
-  {
-    eventId: "e002",
-    memberId: "m002",
-    status: "unanswered",
-    comment: ""
-  },
-  {
-    eventId: "e002",
-    memberId: "m003",
-    status: "attending",
-    comment: "",
-    respondedAt: "2026-07-11 11:00"
-  },
-  {
-    eventId: "e002",
-    memberId: "m004",
-    status: "unanswered",
-    comment: ""
-  },
-  {
-    eventId: "e003",
-    memberId: "m001",
-    status: "unanswered",
-    comment: ""
-  },
-  {
-    eventId: "e003",
-    memberId: "m002",
-    status: "attending",
-    comment: "",
-    respondedAt: "2026-07-21 17:45"
-  },
-  {
-    eventId: "e003",
-    memberId: "m003",
-    status: "unanswered",
-    comment: ""
-  },
-  {
-    eventId: "e003",
-    memberId: "m004",
-    status: "unanswered",
-    comment: ""
-  },
-  {
-    eventId: "e005",
-    memberId: "m001",
-    status: "attending",
-    comment: "",
-    respondedAt: "2026-07-30 10:00"
-  },
-  {
-    eventId: "e005",
-    memberId: "m002",
-    status: "unanswered",
-    comment: ""
-  },
-  {
-    eventId: "e005",
-    memberId: "m003",
-    status: "unanswered",
-    comment: ""
-  },
-  {
-    eventId: "e005",
-    memberId: "m004",
-    status: "unanswered",
-    comment: ""
+    replyDeadline: "2026-07-08",
+    isOverdue: true
   }
 ];
 
-const today = "2026-07-09";
+const today = "2026-07-10";
 
 export function getAttendanceEvents() {
   return scheduleEvents.filter((event) => event.requiresAttendance);
@@ -138,27 +81,33 @@ export function isAttendanceDeadlineOver(eventId: string) {
   return event.attendanceDeadline < today;
 }
 
-export function getAttendanceRows(eventId: string) {
-  const eventResponses = attendanceResponses.filter((response) => response.eventId === eventId);
+export function getAttendanceRows(eventId: string): AttendanceRow[] {
+  const event = getScheduleEvent(eventId);
+  const eventResponses = attendanceResponses.filter((response) => response.eventId === event?.id || response.eventId === eventId);
 
   return members.map((member) => {
     const response = eventResponses.find((item) => item.memberId === member.id);
+    const status = response?.status ?? "unanswered";
 
     return {
-      eventId,
+      responseId: response?.id ?? "",
+      eventId: event?.id ?? eventId,
       memberId: member.id,
       memberName: `${member.lastName} ${member.firstName}`,
       memberKana: `${member.lastNameKana} ${member.firstNameKana}`,
-      status: response?.status ?? "unanswered",
+      memberEmail: member.email,
+      status,
       comment: response?.comment ?? "",
       respondedAt: response?.respondedAt,
-      isOverdue: isAttendanceDeadlineOver(eventId) && (response?.status ?? "unanswered") === "unanswered"
+      replyDeadline: response?.replyDeadline ?? event?.attendanceDeadline,
+      isOverdue: isAttendanceDeadlineOver(event?.id ?? eventId) && status === "unanswered",
+      committees: [],
+      position: undefined
     };
   });
 }
 
-export function getAttendanceSummary(eventId: string) {
-  const rows = getAttendanceRows(eventId);
+export function summarizeRows(rows: AttendanceRow[], isDeadlineOver: boolean): AttendanceSummary {
   const attending = rows.filter((row) => row.status === "attending").length;
   const absent = rows.filter((row) => row.status === "absent").length;
   const late = rows.filter((row) => row.status === "late").length;
@@ -174,22 +123,30 @@ export function getAttendanceSummary(eventId: string) {
     answered,
     total: rows.length,
     responseRate,
-    isDeadlineOver: isAttendanceDeadlineOver(eventId),
-    unansweredRows: rows.filter((row) => row.status === "unanswered")
+    isDeadlineOver,
+    unansweredRows: rows.filter((row) => row.status === "unanswered"),
+    committeeSummaries: [],
+    positionSummaries: []
   };
+}
+
+export function getAttendanceSummary(eventId: string) {
+  return summarizeRows(getAttendanceRows(eventId), isAttendanceDeadlineOver(eventId));
 }
 
 export function getUnansweredAttendanceForMember(memberId: string) {
   return getAttendanceEvents()
-    .filter((event) => {
-      const response = attendanceResponses.find(
-        (item) => item.eventId === event.id && item.memberId === memberId
-      );
+    .map((event) => {
+      const rows = getAttendanceRows(event.id);
+      const row = rows.find((item) => item.memberId === memberId);
 
-      return (response?.status ?? "unanswered") === "unanswered";
+      return row && row.status === "unanswered"
+        ? {
+            event,
+            row,
+            isOverdue: row.isOverdue
+          }
+        : null;
     })
-    .map((event) => ({
-      event,
-      isOverdue: isAttendanceDeadlineOver(event.id)
-    }));
+    .filter((item): item is NonNullable<typeof item> => Boolean(item));
 }
