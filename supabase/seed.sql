@@ -81,12 +81,27 @@ on conflict (id) do update set
 
 insert into public.events (
   id, lom_id, fiscal_year_id, title, event_type, starts_at, ends_at,
-  venue, address, target_audience, description, requires_attendance, attendance_deadline, created_by, created_at, updated_at
+  venue, address, google_map_url, target_audience, description, requires_attendance,
+  attendance_deadline, reminder_at, google_calendar_event_id, target_committee_ids,
+  target_position_ids, target_member_ids, operating_committee_id, contact_member_id,
+  bring_items, dress_code, notes, created_by, created_at, updated_at
 ) values
-  ('60000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000002026', '7月例会', 'regular_meeting', '2026-07-18 19:00:00+09', '2026-07-18 21:00:00+09', '玉島市民交流センター', '岡山県倉敷市玉島阿賀崎1-10-1', '全会員', '地域課題をテーマにした7月例会です。', true, '2026-07-08 23:59:00+09', '20000000-0000-0000-0000-000000000001', '2026-07-01 09:00:00+09', '2026-07-01 09:00:00+09'),
-  ('60000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000002026', '第8回理事会', 'board_meeting', '2026-07-24 19:30:00+09', '2026-07-24 21:30:00+09', '事務局', '岡山県倉敷市玉島中央町', '理事・監事', '8月事業と年度管理に関する協議を行います。', true, '2026-07-20 23:59:00+09', '20000000-0000-0000-0000-000000000003', '2026-07-05 09:00:00+09', '2026-07-05 09:00:00+09'),
-  ('60000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000002026', '総務広報委員会', 'committee', '2026-07-28 20:00:00+09', '2026-07-28 21:30:00+09', 'オンライン', 'Zoom', '総務広報委員会', '広報計画と資料共有ルールを確認します。', true, '2026-07-26 23:59:00+09', '20000000-0000-0000-0000-000000000001', '2026-07-08 09:00:00+09', '2026-07-08 09:00:00+09')
-on conflict (id) do update set title = excluded.title, starts_at = excluded.starts_at, ends_at = excluded.ends_at;
+  ('60000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000002026', '7月例会', 'regular_meeting', '2026-07-18 19:00:00+09', '2026-07-18 21:00:00+09', '玉島市民交流センター', '岡山県倉敷市玉島阿賀崎1-10-1', 'https://www.google.com/maps/search/?api=1&query=岡山県倉敷市玉島阿賀崎1-10-1', '全会員', '地域課題をテーマにした7月例会です。', true, '2026-07-08 23:59:00+09', '2026-07-07 09:00:00+09', null, '{}', '{}', '{}', '30000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', '筆記用具', 'ビジネス', '', '20000000-0000-0000-0000-000000000001', '2026-07-01 09:00:00+09', '2026-07-01 09:00:00+09'),
+  ('60000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000002026', '第8回理事会', 'board_meeting', '2026-07-24 19:30:00+09', '2026-07-24 21:30:00+09', '事務局', '岡山県倉敷市玉島中央町', '', '理事・監事', '8月事業と年度管理に関する協議を行います。', true, '2026-07-20 23:59:00+09', '2026-07-19 09:00:00+09', null, '{}', '{"40000000-0000-0000-0000-000000000001"}', '{}', null, '20000000-0000-0000-0000-000000000003', '議案書、PC', 'スーツ', '議案説明者は開始10分前に集合してください。', '20000000-0000-0000-0000-000000000003', '2026-07-05 09:00:00+09', '2026-07-05 09:00:00+09'),
+  ('60000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000002026', '総務広報委員会', 'committee', '2026-07-28 20:00:00+09', '2026-07-28 21:30:00+09', 'オンライン', 'Zoom', '', '総務広報委員会', '広報計画と資料共有ルールを確認します。', true, '2026-07-26 23:59:00+09', '2026-07-25 09:00:00+09', null, '{"30000000-0000-0000-0000-000000000001"}', '{}', '{}', '30000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', '', '自由', '', '20000000-0000-0000-0000-000000000001', '2026-07-08 09:00:00+09', '2026-07-08 09:00:00+09')
+on conflict (id) do update set
+  title = excluded.title,
+  starts_at = excluded.starts_at,
+  ends_at = excluded.ends_at,
+  google_map_url = excluded.google_map_url,
+  target_committee_ids = excluded.target_committee_ids,
+  target_position_ids = excluded.target_position_ids,
+  target_member_ids = excluded.target_member_ids,
+  operating_committee_id = excluded.operating_committee_id,
+  contact_member_id = excluded.contact_member_id,
+  bring_items = excluded.bring_items,
+  dress_code = excluded.dress_code,
+  notes = excluded.notes;
 
 insert into public.attendance_responses (
   id, lom_id, event_id, member_id, status, comment, responded_at, reply_deadline, is_overdue, created_at, updated_at

@@ -2,8 +2,8 @@ import { scheduleService } from "@/services/scheduleService";
 
 export function useSchedule() {
   return {
-    events: scheduleService.getEvents(),
-    getEventsForFiscalYear: scheduleService.getEventsForFiscalYear,
+    events: scheduleService.getFallbackEvents(),
+    getEventsForFiscalYear: scheduleService.getFallbackEventsForFiscalYear,
     eventTypeLabels: scheduleService.eventTypeLabels,
     eventTypeTones: scheduleService.eventTypeTones,
     formatEventDate: scheduleService.formatEventDate
@@ -12,7 +12,7 @@ export function useSchedule() {
 
 export function useScheduleEvent(eventId: string) {
   return {
-    event: scheduleService.getEventById(eventId),
+    event: scheduleService.getFallbackEventById(eventId),
     eventTypeLabels: scheduleService.eventTypeLabels,
     eventTypeTones: scheduleService.eventTypeTones,
     formatEventDate: scheduleService.formatEventDate
@@ -21,7 +21,7 @@ export function useScheduleEvent(eventId: string) {
 
 export function useUpcomingEvents(limit = 3) {
   return {
-    upcomingEvents: scheduleService.getUpcomingEvents(limit),
+    upcomingEvents: scheduleService.getFallbackUpcomingEvents(limit),
     eventTypeLabels: scheduleService.eventTypeLabels,
     eventTypeTones: scheduleService.eventTypeTones,
     formatEventDate: scheduleService.formatEventDate

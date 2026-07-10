@@ -138,13 +138,25 @@ create table if not exists public.events (
   ends_at timestamptz not null,
   venue text,
   address text,
+  google_map_url text,
   target_audience text,
   description text,
   requires_attendance boolean not null default false,
   attendance_deadline timestamptz,
+  reminder_at timestamptz,
+  google_calendar_event_id text,
+  target_committee_ids uuid[] not null default '{}',
+  target_position_ids uuid[] not null default '{}',
+  target_member_ids uuid[] not null default '{}',
+  operating_committee_id uuid references public.committees(id) on delete set null,
+  contact_member_id uuid references public.members(id) on delete set null,
+  bring_items text,
+  dress_code text,
+  notes text,
   created_by uuid references public.members(id) on delete set null,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
 );
 
 create table if not exists public.attendance_responses (
@@ -242,6 +254,8 @@ grant insert, update on public.committees to anon, authenticated;
 grant insert on public.positions to anon, authenticated;
 grant insert, update on public.annual_member_assignments to anon, authenticated;
 grant insert, update on public.committee_memberships to anon, authenticated;
+grant insert, update on public.events to anon, authenticated;
+grant insert, update on public.attendance_responses to anon, authenticated;
 alter default privileges in schema public grant select on tables to anon, authenticated;
 
 -- Development-only read policies.
@@ -269,6 +283,10 @@ drop policy if exists "dev_insert_annual_member_assignments" on public.annual_me
 drop policy if exists "dev_update_annual_member_assignments" on public.annual_member_assignments;
 drop policy if exists "dev_insert_committee_memberships" on public.committee_memberships;
 drop policy if exists "dev_update_committee_memberships" on public.committee_memberships;
+drop policy if exists "dev_insert_events" on public.events;
+drop policy if exists "dev_update_events" on public.events;
+drop policy if exists "dev_insert_attendance_responses" on public.attendance_responses;
+drop policy if exists "dev_update_attendance_responses" on public.attendance_responses;
 
 create policy "dev_select_loms" on public.loms for select using (true);
 create policy "dev_select_fiscal_years" on public.fiscal_years for select using (true);
@@ -292,3 +310,7 @@ create policy "dev_insert_annual_member_assignments" on public.annual_member_ass
 create policy "dev_update_annual_member_assignments" on public.annual_member_assignments for update using (true) with check (true);
 create policy "dev_insert_committee_memberships" on public.committee_memberships for insert with check (true);
 create policy "dev_update_committee_memberships" on public.committee_memberships for update using (true) with check (true);
+create policy "dev_insert_events" on public.events for insert with check (true);
+create policy "dev_update_events" on public.events for update using (true) with check (true);
+create policy "dev_insert_attendance_responses" on public.attendance_responses for insert with check (true);
+create policy "dev_update_attendance_responses" on public.attendance_responses for update using (true) with check (true);

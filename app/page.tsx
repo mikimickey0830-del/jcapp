@@ -1,18 +1,21 @@
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { StatusPill } from "@/components/StatusPill";
-import { useUnansweredAttendance } from "@/hooks/useAttendance";
-import { useLatestAnnouncements } from "@/hooks/useAnnouncements";
-import { useNewDocuments } from "@/hooks/useDocuments";
-import { useLatestNotifications } from "@/hooks/useNotifications";
-import { useUpcomingEvents } from "@/hooks/useSchedule";
+import { announcementService } from "@/services/announcementService";
+import { attendanceService } from "@/services/attendanceService";
+import { documentService } from "@/services/documentService";
+import { notificationService } from "@/services/notificationService";
+import { scheduleService } from "@/services/scheduleService";
 
-export default function HomePage() {
-  const { upcomingEvents, eventTypeLabels, eventTypeTones, formatEventDate } = useUpcomingEvents(3);
-  const { unansweredAttendance } = useUnansweredAttendance("m004");
-  const { latestAnnouncements, announcementImportanceLabels, announcementImportanceTones } = useLatestAnnouncements(3);
-  const { newDocuments, documentToneByFileType, fileTypeLabels } = useNewDocuments(3);
-  const { latestNotifications, notificationTypeLabels } = useLatestNotifications(3);
+export default async function HomePage() {
+  const scheduleResult = await scheduleService.getEvents();
+  const events = scheduleResult.data;
+  const todayEvents = scheduleService.getTodayEvents(events);
+  const thisWeekEvents = scheduleService.getThisWeekEvents(events).slice(0, 5);
+  const unansweredAttendance = attendanceService.getUnansweredAttendanceForMember("m004");
+  const latestAnnouncements = announcementService.getLatestAnnouncements(3);
+  const newDocuments = documentService.getNewDocuments(3);
+  const latestNotifications = notificationService.getLatestNotifications(3);
 
   return (
     <AppShell>
@@ -26,20 +29,36 @@ export default function HomePage() {
         </div>
         <div className="mt-5 grid grid-cols-2 gap-3">
           <div className="rounded-md bg-white/10 p-3">
-            <p className="text-xs text-blue-100">所属委員会</p>
-            <p className="mt-1 text-sm font-bold">総務広報委員会</p>
+            <p className="text-xs text-blue-100">今日の予定</p>
+            <p className="mt-1 text-sm font-bold">{todayEvents.length}件</p>
           </div>
           <div className="rounded-md bg-white/10 p-3">
-            <p className="text-xs text-blue-100">年度役職</p>
-            <p className="mt-1 text-sm font-bold">委員</p>
+            <p className="text-xs text-blue-100">今週の予定</p>
+            <p className="mt-1 text-sm font-bold">{thisWeekEvents.length}件</p>
           </div>
         </div>
       </header>
 
+      {scheduleResult.error ? (
+        <section className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-800">
+          {scheduleResult.error}
+        </section>
+      ) : null}
+
       <section className="mt-5 grid grid-cols-3 gap-3">
         <SummaryCard label="未回答" value={String(unansweredAttendance.length)} tone="red" />
-        <SummaryCard label="今月予定" value={String(upcomingEvents.length)} tone="blue" />
+        <SummaryCard label="今日" value={String(todayEvents.length)} tone="blue" />
         <SummaryCard label="新着資料" value={String(newDocuments.length)} tone="green" />
+      </section>
+
+      <section className="mt-6" id="today-schedule">
+        <SectionTitle actionHref="/schedule" actionLabel="一覧" title="今日の予定" />
+        <EventList events={todayEvents} emptyText="今日の予定はありません。" />
+      </section>
+
+      <section className="mt-6" id="week-schedule">
+        <SectionTitle actionHref="/schedule" actionLabel="一覧" title="今週の予定" />
+        <EventList events={thisWeekEvents} emptyText="今週の予定はありません。" />
       </section>
 
       <section className="mt-6">
@@ -63,27 +82,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mt-6" id="schedule">
-        <SectionTitle actionHref="/schedule" actionLabel="一覧" title="直近の予定" />
-        <div className="mt-3 space-y-3">
-          {upcomingEvents.map((event) => (
-            <Link className="block rounded-md border border-jc-line bg-white p-4 shadow-sm" href={`/schedule/${event.id}`} key={event.id}>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="font-bold text-slate-900">{event.title}</h2>
-                  <p className="mt-1 text-sm text-slate-600">{formatEventDate(event)} - {event.endTime}</p>
-                  <p className="mt-1 text-sm text-slate-500">{event.venue}</p>
-                </div>
-                <StatusPill
-                  label={eventTypeLabels[event.eventType]}
-                  tone={eventTypeTones[event.eventType]}
-                />
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
       <section className="mt-6" id="documents">
         <SectionTitle actionHref="/documents" title="新着資料" actionLabel="開く" />
         <div className="mt-3 rounded-md border border-jc-line bg-white">
@@ -94,7 +92,7 @@ export default function HomePage() {
               key={document.id}
             >
               <span className="min-w-0 truncate text-sm font-medium text-slate-800">{document.title}</span>
-              <StatusPill label={fileTypeLabels[document.fileType]} tone={documentToneByFileType[document.fileType]} />
+              <StatusPill label={documentService.fileTypeLabels[document.fileType]} tone={documentService.documentToneByFileType[document.fileType]} />
             </Link>
           ))}
         </div>
@@ -116,8 +114,8 @@ export default function HomePage() {
                   <p className="mt-2 text-xs font-semibold text-slate-500">{announcement.publishStartAt}</p>
                 </div>
                 <StatusPill
-                  label={announcementImportanceLabels[announcement.importance]}
-                  tone={announcementImportanceTones[announcement.importance]}
+                  label={announcementService.announcementImportanceLabels[announcement.importance]}
+                  tone={announcementService.announcementImportanceTones[announcement.importance]}
                 />
               </div>
             </Link>
@@ -131,26 +129,37 @@ export default function HomePage() {
           {latestNotifications.map((notification) => (
             <Link className="block rounded-md bg-amber-50 px-4 py-3" href={notification.relatedHref ?? "/notifications"} key={notification.id}>
               <p className="text-sm font-bold text-amber-900">{notification.title}</p>
-              <p className="mt-1 text-xs font-semibold text-amber-700">{notificationTypeLabels[notification.type]}</p>
+              <p className="mt-1 text-xs font-semibold text-amber-700">{notificationService.notificationTypeLabels[notification.type]}</p>
             </Link>
           ))}
         </div>
       </section>
-
-      <section className="mt-6 rounded-md border border-jc-line bg-white p-4" id="admin">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="font-bold text-slate-900">年度管理</h2>
-            <p className="mt-1 text-sm leading-5 text-slate-600">
-              前年度コピーで新年度の役職、委員会、権限を準備します。
-            </p>
-          </div>
-          <Link className="rounded-md bg-jc-navy px-3 py-2 text-sm font-bold text-white" href="#admin">
-            管理
-          </Link>
-        </div>
-      </section>
     </AppShell>
+  );
+}
+
+function EventList({ events, emptyText }: { events: Awaited<ReturnType<typeof scheduleService.getEvents>>["data"]; emptyText: string }) {
+  return (
+    <div className="mt-3 space-y-3">
+      {events.length > 0 ? (
+        events.map((event) => (
+          <Link className="block rounded-md border border-jc-line bg-white p-4 shadow-sm" href={`/schedule/${event.id}`} key={event.id}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="font-bold text-slate-900">{event.title}</h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  {scheduleService.formatEventDate(event)} - {event.endTime}
+                </p>
+                <p className="mt-1 truncate text-sm text-slate-500">{event.venue || "会場未設定"}</p>
+              </div>
+              <StatusPill label={scheduleService.eventTypeLabels[event.eventType]} tone={scheduleService.eventTypeTones[event.eventType]} />
+            </div>
+          </Link>
+        ))
+      ) : (
+        <p className="rounded-md border border-jc-line bg-white p-4 text-sm text-slate-500">{emptyText}</p>
+      )}
+    </div>
   );
 }
 

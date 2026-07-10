@@ -2,28 +2,31 @@ import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusPill } from "@/components/StatusPill";
-import { useSchedule } from "@/hooks/useSchedule";
+import { scheduleService } from "@/services/scheduleService";
 import type { ScheduleEvent } from "@/types/schedule";
 
-export default function SchedulePage() {
-  const { events, getEventsForFiscalYear, eventTypeLabels, eventTypeTones, formatEventDate } = useSchedule();
-  const currentYearEvents = getEventsForFiscalYear(2026);
+export default async function SchedulePage() {
+  const result = await scheduleService.getEvents();
+  const events = result.data;
+  const currentFiscalYear = events.find((event) => event.fiscalYear)?.fiscalYear ?? 2026;
+  const currentYearEvents = scheduleService.getEventsForFiscalYear(events, currentFiscalYear);
 
   return (
     <AppShell>
       <PageHeader
         action={{ href: "/schedule/new", label: "新規作成" }}
-        description="年度に紐づく予定を管理します。出欠確認の有無と返信期限もイベント単位で設定します。"
+        description="年度、LOM、対象委員会、出欠確認までイベント単位で管理します。"
         title="スケジュール"
       />
+      <DataSourceNotice error={result.error} source={result.source} />
 
       <section className="grid grid-cols-3 gap-3">
-        <SummaryCard label="2026年度" value={String(currentYearEvents.length)} />
+        <SummaryCard label={`${currentFiscalYear}年度`} value={String(currentYearEvents.length)} />
         <SummaryCard
           label="出欠あり"
           value={String(currentYearEvents.filter((event) => event.requiresAttendance).length)}
         />
-        <SummaryCard label="全年度" value={String(events.length)} />
+        <SummaryCard label="全予定" value={String(events.length)} />
       </section>
 
       <section className="mt-5 rounded-md border border-jc-line bg-white p-1 shadow-sm">
@@ -52,9 +55,9 @@ export default function SchedulePage() {
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold text-slate-900">{event.title}</p>
-                      <p className="text-xs text-slate-500">{formatEventDate(event)}</p>
+                      <p className="text-xs text-slate-500">{scheduleService.formatEventDate(event)}</p>
                     </div>
-                    <StatusPill label={eventTypeLabels[event.eventType]} tone={eventTypeTones[event.eventType]} />
+                    <StatusPill label={scheduleService.eventTypeLabels[event.eventType]} tone={scheduleService.eventTypeTones[event.eventType]} />
                   </Link>
                 ))}
               </div>
@@ -74,19 +77,23 @@ export default function SchedulePage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold text-slate-500">{event.lomName} / {event.fiscalYear}年度</p>
+                  <p className="text-xs font-semibold text-slate-500">
+                    {event.lomName} / {event.fiscalYear}年度
+                  </p>
                   <h3 className="mt-1 text-lg font-bold text-slate-900">{event.title}</h3>
                 </div>
-                <StatusPill label={eventTypeLabels[event.eventType]} tone={eventTypeTones[event.eventType]} />
+                <StatusPill label={scheduleService.eventTypeLabels[event.eventType]} tone={scheduleService.eventTypeTones[event.eventType]} />
               </div>
               <div className="mt-3 grid gap-1 text-sm text-slate-600">
-                <span>{formatEventDate(event)} - {event.endTime}</span>
-                <span>{event.venue}</span>
-                <span>対象: {event.targetAudience}</span>
+                <span>
+                  {scheduleService.formatEventDate(event)} - {event.endTime}
+                </span>
+                <span>{event.venue || "会場未設定"}</span>
+                <span>対象: {event.targetAudience || "未設定"}</span>
               </div>
               {event.requiresAttendance ? (
                 <p className="mt-3 rounded-md bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">
-                  出欠返信期限: {event.attendanceDeadline}
+                  出欠返信期限: {event.attendanceDeadline ?? "未設定"}
                 </p>
               ) : null}
             </Link>
@@ -120,4 +127,14 @@ function getMonthGroups(events: ScheduleEvent[]) {
     monthLabel,
     events: groupedEvents
   }));
+}
+
+function DataSourceNotice({ error, source }: { error: string | null; source: "supabase" | "fallback" }) {
+  if (!error && source === "supabase") return null;
+
+  return (
+    <section className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-800">
+      {error ?? "Supabaseに該当データがないため、仮データを表示しています。"}
+    </section>
+  );
 }

@@ -9,6 +9,8 @@ grant insert, update on public.committees to anon, authenticated;
 grant insert on public.positions to anon, authenticated;
 grant insert, update on public.annual_member_assignments to anon, authenticated;
 grant insert, update on public.committee_memberships to anon, authenticated;
+grant insert, update on public.events to anon, authenticated;
+grant insert, update on public.attendance_responses to anon, authenticated;
 alter default privileges in schema public grant select on tables to anon, authenticated;
 
 alter table public.committees add column if not exists description text;
@@ -17,6 +19,18 @@ alter table public.committees add column if not exists chair_member_id uuid refe
 alter table public.committees add column if not exists vice_chair_member_id uuid references public.members(id) on delete set null;
 alter table public.committees add column if not exists deleted_at timestamptz;
 alter table public.annual_member_assignments add column if not exists is_active boolean not null default true;
+alter table public.events add column if not exists google_map_url text;
+alter table public.events add column if not exists reminder_at timestamptz;
+alter table public.events add column if not exists google_calendar_event_id text;
+alter table public.events add column if not exists target_committee_ids uuid[] not null default '{}';
+alter table public.events add column if not exists target_position_ids uuid[] not null default '{}';
+alter table public.events add column if not exists target_member_ids uuid[] not null default '{}';
+alter table public.events add column if not exists operating_committee_id uuid references public.committees(id) on delete set null;
+alter table public.events add column if not exists contact_member_id uuid references public.members(id) on delete set null;
+alter table public.events add column if not exists bring_items text;
+alter table public.events add column if not exists dress_code text;
+alter table public.events add column if not exists notes text;
+alter table public.events add column if not exists deleted_at timestamptz;
 
 create table if not exists public.committee_memberships (
   id uuid primary key default gen_random_uuid(),
@@ -69,6 +83,10 @@ drop policy if exists "dev_update_annual_member_assignments" on public.annual_me
 drop policy if exists "dev_select_committee_memberships" on public.committee_memberships;
 drop policy if exists "dev_insert_committee_memberships" on public.committee_memberships;
 drop policy if exists "dev_update_committee_memberships" on public.committee_memberships;
+drop policy if exists "dev_insert_events" on public.events;
+drop policy if exists "dev_update_events" on public.events;
+drop policy if exists "dev_insert_attendance_responses" on public.attendance_responses;
+drop policy if exists "dev_update_attendance_responses" on public.attendance_responses;
 
 create policy "dev_insert_members" on public.members for insert with check (true);
 create policy "dev_update_members" on public.members for update using (true) with check (true);
@@ -81,5 +99,9 @@ create policy "dev_update_annual_member_assignments" on public.annual_member_ass
 create policy "dev_select_committee_memberships" on public.committee_memberships for select using (true);
 create policy "dev_insert_committee_memberships" on public.committee_memberships for insert with check (true);
 create policy "dev_update_committee_memberships" on public.committee_memberships for update using (true) with check (true);
+create policy "dev_insert_events" on public.events for insert with check (true);
+create policy "dev_update_events" on public.events for update using (true) with check (true);
+create policy "dev_insert_attendance_responses" on public.attendance_responses for insert with check (true);
+create policy "dev_update_attendance_responses" on public.attendance_responses for update using (true) with check (true);
 
 notify pgrst, 'reload schema';
