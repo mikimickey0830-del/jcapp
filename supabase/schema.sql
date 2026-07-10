@@ -83,10 +83,13 @@ create table if not exists public.annual_member_assignments (
   position_id uuid references public.positions(id) on delete set null,
   role text not null default 'member' check (role in ('member', 'vice_chair', 'chair', 'secretary', 'president', 'admin')),
   is_board_member boolean not null default false,
+  is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (fiscal_year_id, member_id)
 );
+
+alter table public.annual_member_assignments add column if not exists is_active boolean not null default true;
 
 create table if not exists public.events (
   id uuid primary key default gen_random_uuid(),

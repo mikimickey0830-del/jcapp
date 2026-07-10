@@ -15,6 +15,7 @@ alter table public.committees add column if not exists vice_president_member_id 
 alter table public.committees add column if not exists chair_member_id uuid references public.members(id) on delete set null;
 alter table public.committees add column if not exists vice_chair_member_id uuid references public.members(id) on delete set null;
 alter table public.committees add column if not exists deleted_at timestamptz;
+alter table public.annual_member_assignments add column if not exists is_active boolean not null default true;
 
 drop policy if exists "dev_insert_members" on public.members;
 drop policy if exists "dev_update_members" on public.members;

@@ -74,6 +74,13 @@ export default async function YearDetailPage({ params }: { params: { year: strin
         <SummaryCard label="所属" value={String(fiscalYear.assignments.length)} />
       </section>
 
+      <Link
+        className="mt-4 flex min-h-12 items-center justify-center rounded-md bg-jc-blue px-4 text-sm font-bold text-white shadow-soft"
+        href={`/assignments/${fiscalYear.id}`}
+      >
+        年度所属を管理
+      </Link>
+
       <section className="mt-6">
         <h2 className="text-lg font-bold text-jc-navy">役職</h2>
         <div className="mt-3 grid gap-2">

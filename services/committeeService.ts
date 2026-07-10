@@ -53,6 +53,7 @@ type AssignmentRow = {
   committee_id: string | null;
   member_id: string;
   role: AnnualRole | null;
+  is_active?: boolean | null;
 };
 
 type MemberRow = {
@@ -220,7 +221,7 @@ async function fetchAssignments() {
 
   const { data, error } = await supabase
     .from("annual_member_assignments")
-    .select("committee_id, member_id, role")
+    .select("committee_id, member_id, role, is_active")
     .not("committee_id", "is", null);
 
   if (error) {
@@ -309,7 +310,7 @@ async function fetchCommittees(): Promise<CommitteeQueryResult> {
     ]);
     const membersById = new Map(members.map((member) => [member.id, member]));
     const assignmentsByCommittee = assignmentRows.reduce<Map<string, AssignmentRow[]>>((accumulator, assignment) => {
-      if (!assignment.committee_id) {
+      if (!assignment.committee_id || assignment.is_active === false) {
         return accumulator;
       }
 
