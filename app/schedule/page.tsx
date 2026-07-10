@@ -1,15 +1,20 @@
 import Link from "next/link";
+import { unstable_noStore as noStore } from "next/cache";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusPill } from "@/components/StatusPill";
 import { scheduleService } from "@/services/scheduleService";
 import type { ScheduleEvent } from "@/types/schedule";
 
+// Events are updated through the management screens, so this page must read current data at request time.
+export const dynamic = "force-dynamic";
+
 export default async function SchedulePage() {
+  noStore();
   const result = await scheduleService.getEvents();
   const events = result.data;
-  const currentFiscalYear = events.find((event) => event.fiscalYear)?.fiscalYear ?? 2026;
-  const currentYearEvents = scheduleService.getEventsForFiscalYear(events, currentFiscalYear);
+  const listedEvents = events;
+  const fiscalYearCount = new Set(events.map((event) => event.fiscalYearId)).size;
 
   return (
     <AppShell>
@@ -21,10 +26,10 @@ export default async function SchedulePage() {
       <DataSourceNotice error={result.error} source={result.source} />
 
       <section className="grid grid-cols-3 gap-3">
-        <SummaryCard label={`${currentFiscalYear}年度`} value={String(currentYearEvents.length)} />
+        <SummaryCard label="対象年度" value={String(fiscalYearCount)} />
         <SummaryCard
           label="出欠あり"
-          value={String(currentYearEvents.filter((event) => event.requiresAttendance).length)}
+          value={String(listedEvents.filter((event) => event.requiresAttendance).length)}
         />
         <SummaryCard label="全予定" value={String(events.length)} />
       </section>
@@ -43,7 +48,7 @@ export default async function SchedulePage() {
       <section className="mt-5">
         <h2 className="text-lg font-bold text-jc-navy">月表示</h2>
         <div className="mt-3 space-y-3">
-          {getMonthGroups(currentYearEvents).map((group) => (
+          {getMonthGroups(listedEvents).map((group) => (
             <article className="rounded-md border border-jc-line bg-white p-4 shadow-sm" key={group.monthLabel}>
               <h3 className="font-bold text-jc-navy">{group.monthLabel}</h3>
               <div className="mt-3 grid gap-2">
@@ -69,7 +74,7 @@ export default async function SchedulePage() {
       <section className="mt-6">
         <h2 className="text-lg font-bold text-jc-navy">リスト表示</h2>
         <div className="mt-3 space-y-3">
-          {currentYearEvents.map((event) => (
+          {listedEvents.map((event) => (
             <Link
               className="block rounded-md border border-jc-line bg-white p-4 shadow-sm transition hover:border-jc-blue hover:shadow-soft"
               href={`/schedule/${event.id}`}
@@ -118,7 +123,7 @@ function getMonthGroups(events: ScheduleEvent[]) {
 
   events.forEach((event) => {
     const month = Number(event.date.slice(5, 7));
-    const monthLabel = `${month}月`;
+    const monthLabel = `${event.date.slice(0, 4)}年${month}月`;
     const current = groups.get(monthLabel) ?? [];
     groups.set(monthLabel, [...current, event]);
   });

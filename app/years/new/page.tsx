@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from "next/cache";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { YearForm } from "@/components/YearForm";
@@ -7,6 +8,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function NewYearPage() {
+  noStore();
   const { data: fiscalYears, error, source } = await yearService.getYears();
 
   return (

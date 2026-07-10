@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unstable_noStore as noStore } from "next/cache";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { EventDeleteButton } from "@/components/EventDeleteButton";
@@ -8,6 +9,7 @@ import { attendanceService } from "@/services/attendanceService";
 import { scheduleService } from "@/services/scheduleService";
 
 export default async function ScheduleEventDetailPage({ params }: { params: { eventId: string } }) {
+  noStore();
   const [eventResult, attendanceResult] = await Promise.all([
     scheduleService.getEventById(params.eventId),
     attendanceService.getAttendanceDetail(params.eventId)

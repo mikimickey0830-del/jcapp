@@ -1,9 +1,14 @@
+import { unstable_noStore as noStore } from "next/cache";
 import { AppShell } from "@/components/AppShell";
 import { EventForm } from "@/components/EventForm";
 import { PageHeader } from "@/components/PageHeader";
 import { scheduleService } from "@/services/scheduleService";
 
+// Form options depend on the current fiscal-year master data.
+export const dynamic = "force-dynamic";
+
 export default async function NewScheduleEventPage() {
+  noStore();
   const optionsResult = await scheduleService.getFormOptions();
 
   return (

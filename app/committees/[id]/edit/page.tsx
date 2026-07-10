@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { unstable_noStore as noStore } from "next/cache";
 import { AppShell } from "@/components/AppShell";
 import { CommitteeForm } from "@/components/CommitteeForm";
 import { PageHeader } from "@/components/PageHeader";
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function EditCommitteePage({ params }: { params: { id: string } }) {
+  noStore();
   const [{ data: committee, error: committeeError, source: committeeSource }, optionsResult] = await Promise.all([
     committeeService.getCommitteeById(params.id),
     committeeService.getFormOptions()

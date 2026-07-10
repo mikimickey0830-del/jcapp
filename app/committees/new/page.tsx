@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from "next/cache";
 import { AppShell } from "@/components/AppShell";
 import { CommitteeForm } from "@/components/CommitteeForm";
 import { PageHeader } from "@/components/PageHeader";
@@ -7,6 +8,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function NewCommitteePage() {
+  noStore();
   const { data: options, error, source } = await committeeService.getFormOptions();
 
   return (

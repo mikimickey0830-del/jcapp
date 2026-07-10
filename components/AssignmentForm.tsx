@@ -300,7 +300,7 @@ export function AssignmentForm({ assignment, options }: AssignmentFormProps) {
       <section className="rounded-md border border-jc-line bg-white p-4 shadow-sm">
         <h2 className="text-base font-bold text-jc-navy">状態</h2>
         <div className="mt-4 grid gap-2">
-          <CheckRow checked={isBoardMember} label="理事・役員として扱う" onChange={setIsBoardMember} />
+          <CheckRow checked={isBoardMember} label="理事会の役員として扱う" onChange={setIsBoardMember} />
           <CheckRow checked={isActive} label="この年度所属を有効にする" onChange={setIsActive} />
         </div>
       </section>

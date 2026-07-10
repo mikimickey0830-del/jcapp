@@ -110,14 +110,14 @@ export function MemberForm({ mode, member }: MemberFormProps) {
       <section className="rounded-md border border-jc-line bg-white p-4 shadow-sm">
         <h2 className="text-base font-bold text-jc-navy">会員基本情報</h2>
         <p className="mt-1 text-xs leading-5 text-slate-500">
-          年度をまたいで引き継ぐ情報です。役職、委員会、権限は年度管理で扱います。
+          年度をまたいで引き継ぐ会員情報です。役職、委員会、権限は年度所属管理で扱います。
         </p>
 
         <div className="mt-4 grid grid-cols-2 gap-3">
           <TextField label="姓" name="lastName" onChange={updateValue} required value={values.lastName} />
           <TextField label="名" name="firstName" onChange={updateValue} required value={values.firstName} />
-          <TextField label="姓 フリガナ" name="lastNameKana" onChange={updateValue} value={values.lastNameKana} />
-          <TextField label="名 フリガナ" name="firstNameKana" onChange={updateValue} value={values.firstNameKana} />
+          <TextField label="姓フリガナ" name="lastNameKana" onChange={updateValue} value={values.lastNameKana} />
+          <TextField label="名フリガナ" name="firstNameKana" onChange={updateValue} value={values.firstNameKana} />
         </div>
 
         <div className="mt-3 space-y-3">
@@ -151,7 +151,7 @@ export function MemberForm({ mode, member }: MemberFormProps) {
       <section className="rounded-md border border-dashed border-jc-line bg-jc-sky p-4">
         <h2 className="text-base font-bold text-jc-navy">年度別情報</h2>
         <p className="mt-1 text-sm leading-6 text-slate-700">
-          今回は会員基本情報のみSupabaseへ保存します。年度ごとの役職、委員会、権限は年度管理機能で別途保存します。
+          今回は会員基本情報のみSupabaseへ保存します。年度ごとの役職、委員会、権限は年度所属管理で保存します。
         </p>
       </section>
 

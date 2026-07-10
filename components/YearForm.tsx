@@ -112,13 +112,7 @@ export function YearForm({ fiscalYears }: YearFormProps) {
       <section className="rounded-md border border-jc-line bg-white p-4 shadow-sm">
         <h2 className="text-base font-bold text-jc-navy">年度基本情報</h2>
         <div className="mt-4 space-y-3">
-          <TextField
-            error={errors.name}
-            label="年度名"
-            name="name"
-            onChange={setName}
-            value={name}
-          />
+          <TextField error={errors.name} label="年度名" name="name" onChange={setName} value={name} />
           <TextField label="LOM" name="lomName" readOnly value={latestYear?.lomName ?? "玉島青年会議所"} />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <TextField
@@ -166,7 +160,7 @@ export function YearForm({ fiscalYears }: YearFormProps) {
         <div className="mt-4 grid gap-2">
           <CheckRow checked={copyPositions} label="役職マスタをコピー" onChange={setCopyPositions} />
           <CheckRow checked={copyCommittees} label="委員会マスタをコピー" onChange={setCopyCommittees} />
-          <CheckRow checked={copyAssignments} label="会員ごとの年度所属・年度権限をコピー" onChange={setCopyAssignments} />
+          <CheckRow checked={copyAssignments} label="会員ごとの年度所属と権限をコピー" onChange={setCopyAssignments} />
         </div>
 
         {copySource ? (
@@ -181,9 +175,9 @@ export function YearForm({ fiscalYears }: YearFormProps) {
       </section>
 
       <section className="rounded-md border border-dashed border-jc-line bg-slate-50 p-4">
-        <h2 className="text-base font-bold text-jc-navy">作成後に編集する情報</h2>
+        <h2 className="text-base font-bold text-jc-navy">作成後に確認する情報</h2>
         <p className="mt-1 text-sm leading-6 text-slate-600">
-          コピーされた内容は、年度詳細画面で確認できます。役職、委員会、会員別の所属・権限編集は次の実装で追加します。
+          コピーされた内容は年度詳細画面と年度所属管理で確認できます。必要に応じて役職、委員会、複数委員会所属を調整してください。
         </p>
       </section>
 

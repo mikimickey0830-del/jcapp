@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { unstable_noStore as noStore } from "next/cache";
 import { AppShell } from "@/components/AppShell";
 import { AssignmentForm } from "@/components/AssignmentForm";
 import { PageHeader } from "@/components/PageHeader";
@@ -12,6 +13,7 @@ export default async function EditAssignmentPage({
 }: {
   params: { yearId: string; memberId: string };
 }) {
+  noStore();
   const [yearResult, optionsResult] = await Promise.all([
     assignmentService.getAssignmentYear(params.yearId),
     assignmentService.getAssignmentFormOptions(params.yearId, params.memberId)

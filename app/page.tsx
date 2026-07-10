@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unstable_noStore as noStore } from "next/cache";
 import { AppShell } from "@/components/AppShell";
 import { StatusPill } from "@/components/StatusPill";
 import { announcementService } from "@/services/announcementService";
@@ -8,7 +9,11 @@ import { notificationService } from "@/services/notificationService";
 import { scheduleService } from "@/services/scheduleService";
 import type { ScheduleEvent } from "@/types/schedule";
 
+// The home dashboard contains time-sensitive operational information.
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
+  noStore();
   const [scheduleResult, attendanceDashboard] = await Promise.all([
     scheduleService.getEvents(),
     attendanceService.getAttendanceDashboard()

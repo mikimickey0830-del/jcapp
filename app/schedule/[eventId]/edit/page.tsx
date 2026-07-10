@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
+import { unstable_noStore as noStore } from "next/cache";
 import { AppShell } from "@/components/AppShell";
 import { EventForm } from "@/components/EventForm";
 import { PageHeader } from "@/components/PageHeader";
 import { scheduleService } from "@/services/scheduleService";
 
 export default async function EditScheduleEventPage({ params }: { params: { eventId: string } }) {
+  noStore();
   const [eventResult, optionsResult] = await Promise.all([
     scheduleService.getEventById(params.eventId),
     scheduleService.getFormOptions()

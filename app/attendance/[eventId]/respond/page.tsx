@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unstable_noStore as noStore } from "next/cache";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { AttendanceResponseForm } from "@/components/AttendanceResponseForm";
@@ -8,6 +9,7 @@ import { attendanceService } from "@/services/attendanceService";
 import { scheduleService } from "@/services/scheduleService";
 
 export default async function AttendanceRespondPage({ params }: { params: { eventId: string } }) {
+  noStore();
   const result = await attendanceService.getAttendanceDetail(params.eventId);
   const detail = result.data;
 

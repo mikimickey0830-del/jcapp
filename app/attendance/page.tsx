@@ -1,11 +1,16 @@
 import Link from "next/link";
+import { unstable_noStore as noStore } from "next/cache";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusPill } from "@/components/StatusPill";
 import { attendanceService } from "@/services/attendanceService";
 import { scheduleService } from "@/services/scheduleService";
 
+// Attendance status changes throughout the day and must not be statically cached.
+export const dynamic = "force-dynamic";
+
 export default async function AttendancePage() {
+  noStore();
   const result = await attendanceService.getAttendanceEvents();
   const events = result.data;
 

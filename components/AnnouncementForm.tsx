@@ -21,6 +21,10 @@ export function AnnouncementForm({ mode, announcement }: AnnouncementFormProps) 
 
   return (
     <form className="space-y-5">
+      <section className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-800">
+        お知らせ作成はVer.1テスト時点ではUI確認のみです。Supabase保存と通知連動は未実装です。
+      </section>
+
       <section className="rounded-md border border-jc-line bg-white p-4 shadow-sm">
         <h2 className="text-base font-bold text-jc-navy">お知らせ内容</h2>
         <div className="mt-4 space-y-3">
@@ -36,35 +40,8 @@ export function AnnouncementForm({ mode, announcement }: AnnouncementFormProps) 
             />
           </label>
 
-          <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-slate-700">種別</span>
-            <select
-              className="min-h-12 w-full rounded-md border border-jc-line bg-slate-50 px-3 text-base outline-none focus:border-jc-blue focus:bg-white focus:ring-4 focus:ring-blue-100"
-              defaultValue={announcement?.type ?? "general"}
-              name="type"
-            >
-              {Object.entries(announcementTypeLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-slate-700">重要度</span>
-            <select
-              className="min-h-12 w-full rounded-md border border-jc-line bg-slate-50 px-3 text-base outline-none focus:border-jc-blue focus:bg-white focus:ring-4 focus:ring-blue-100"
-              defaultValue={announcement?.importance ?? "normal"}
-              name="importance"
-            >
-              {Object.entries(announcementImportanceLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SelectField defaultValue={announcement?.type ?? "general"} label="種別" name="type" options={announcementTypeLabels} />
+          <SelectField defaultValue={announcement?.importance ?? "normal"} label="重要度" name="importance" options={announcementImportanceLabels} />
         </div>
       </section>
 
@@ -88,21 +65,7 @@ export function AnnouncementForm({ mode, announcement }: AnnouncementFormProps) 
 
           <TextField defaultValue={announcement?.targetLom ?? "玉島青年会議所"} label="対象LOM" name="targetLom" />
           <TextField defaultValue={announcement?.targetCommittee ?? ""} label="対象委員会" name="targetCommittee" />
-
-          <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-slate-700">公開範囲</span>
-            <select
-              className="min-h-12 w-full rounded-md border border-jc-line bg-slate-50 px-3 text-base outline-none focus:border-jc-blue focus:bg-white focus:ring-4 focus:ring-blue-100"
-              defaultValue={announcement?.visibility ?? "members"}
-              name="visibility"
-            >
-              {Object.entries(announcementVisibilityLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SelectField defaultValue={announcement?.visibility ?? "members"} label="公開範囲" name="visibility" options={announcementVisibilityLabels} />
         </div>
       </section>
 
@@ -132,7 +95,7 @@ export function AnnouncementForm({ mode, announcement }: AnnouncementFormProps) 
       <section className="rounded-md border border-dashed border-jc-line bg-jc-sky p-4">
         <h2 className="text-base font-bold text-jc-navy">通知連動メモ</h2>
         <p className="mt-2 text-sm leading-6 text-slate-700">
-          保存後に通知を作成する場合は、このお知らせIDと通知種別 announcement を通知サービスへ渡す設計です。
+          保存後に通知を作成する場合は、お知らせIDと通知種別 announcement を通知サービスへ渡す設計です。
         </p>
       </section>
 
@@ -143,8 +106,12 @@ export function AnnouncementForm({ mode, announcement }: AnnouncementFormProps) 
         >
           キャンセル
         </Link>
-        <button className="min-h-12 rounded-md bg-jc-blue px-4 text-sm font-bold text-white shadow-soft" type="button">
-          {isEdit ? "更新する" : "作成する"}
+        <button
+          className="min-h-12 rounded-md bg-slate-300 px-4 text-sm font-bold text-slate-600"
+          disabled
+          type="button"
+        >
+          保存未実装
         </button>
       </div>
     </form>
@@ -169,6 +136,35 @@ function TextField({
         name={name}
         type="text"
       />
+    </label>
+  );
+}
+
+function SelectField({
+  label,
+  name,
+  defaultValue,
+  options
+}: {
+  label: string;
+  name: string;
+  defaultValue: string;
+  options: Record<string, string>;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-semibold text-slate-700">{label}</span>
+      <select
+        className="min-h-12 w-full rounded-md border border-jc-line bg-slate-50 px-3 text-base outline-none focus:border-jc-blue focus:bg-white focus:ring-4 focus:ring-blue-100"
+        defaultValue={defaultValue}
+        name={name}
+      >
+        {Object.entries(options).map(([value, labelText]) => (
+          <option key={value} value={value}>
+            {labelText}
+          </option>
+        ))}
+      </select>
     </label>
   );
 }
