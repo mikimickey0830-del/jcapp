@@ -15,19 +15,62 @@ export type AnnouncementImportance = "normal" | "important" | "urgent";
 
 export type Announcement = {
   id: string;
+  lomId: string;
+  fiscalYearId: string;
+  fiscalYear: number;
+  fiscalYearName: string;
   title: string;
   body: string;
   type: AnnouncementType;
-  fiscalYear: number;
   targetLom: string;
+  targetCommitteeId?: string;
   targetCommittee?: string;
   visibility: AnnouncementVisibility;
   importance: AnnouncementImportance;
   publishStartAt: string;
   publishEndAt?: string;
-  authorMemberId: string;
+  authorMemberId?: string;
+  authorMemberName: string;
   createdAt: string;
   updatedAt: string;
-  // 通知機能と連動するとき、この種別を通知作成時の type に渡す想定。
+  deletedAt?: string;
+  // Reserved for the future notification service integration.
   notificationType: Extract<NotificationType, "announcement">;
+};
+
+export type AnnouncementFormOptions = {
+  fiscalYears: Array<{
+    id: string;
+    year: number;
+    name: string;
+    lomId: string;
+    lomName: string;
+  }>;
+  loms: Array<{
+    id: string;
+    name: string;
+  }>;
+  committees: Array<{
+    id: string;
+    fiscalYearId: string;
+    name: string;
+  }>;
+  members: Array<{
+    id: string;
+    name: string;
+  }>;
+};
+
+export type AnnouncementMutationPayload = {
+  fiscalYearId?: string;
+  title?: string;
+  body?: string;
+  type?: AnnouncementType;
+  targetLom?: string;
+  targetCommitteeId?: string;
+  visibility?: AnnouncementVisibility;
+  importance?: AnnouncementImportance;
+  publishStartAt?: string;
+  publishEndAt?: string;
+  authorMemberId?: string;
 };

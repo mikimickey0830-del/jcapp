@@ -1,34 +1,14 @@
 import { announcementService } from "@/services/announcementService";
 
+// Server pages should await these data helpers before rendering.
 export function useAnnouncements() {
-  return {
-    announcements: announcementService.getAnnouncements(),
-    announcementTypeLabels: announcementService.announcementTypeLabels,
-    announcementVisibilityLabels: announcementService.announcementVisibilityLabels,
-    announcementImportanceLabels: announcementService.announcementImportanceLabels,
-    announcementTypeTones: announcementService.announcementTypeTones,
-    announcementImportanceTones: announcementService.announcementImportanceTones,
-    getAnnouncementAuthor: announcementService.getAnnouncementAuthor
-  };
+  return announcementService.getAnnouncements();
 }
 
 export function useAnnouncement(id: string) {
-  return {
-    announcement: announcementService.getAnnouncementById(id),
-    announcementTypeLabels: announcementService.announcementTypeLabels,
-    announcementVisibilityLabels: announcementService.announcementVisibilityLabels,
-    announcementImportanceLabels: announcementService.announcementImportanceLabels,
-    announcementTypeTones: announcementService.announcementTypeTones,
-    announcementImportanceTones: announcementService.announcementImportanceTones,
-    getAnnouncementAuthor: announcementService.getAnnouncementAuthor
-  };
+  return announcementService.getAnnouncementById(id);
 }
 
 export function useLatestAnnouncements(limit = 3) {
-  return {
-    latestAnnouncements: announcementService.getLatestAnnouncements(limit),
-    announcementTypeLabels: announcementService.announcementTypeLabels,
-    announcementImportanceLabels: announcementService.announcementImportanceLabels,
-    announcementImportanceTones: announcementService.announcementImportanceTones
-  };
+  return announcementService.getLatestAnnouncements(limit);
 }

@@ -14,14 +14,15 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   noStore();
-  const [scheduleResult, attendanceDashboard] = await Promise.all([
+  const [scheduleResult, attendanceDashboard, announcementResult] = await Promise.all([
     scheduleService.getEvents(),
-    attendanceService.getAttendanceDashboard()
+    attendanceService.getAttendanceDashboard(),
+    announcementService.getLatestAnnouncements(3)
   ]);
   const events = scheduleResult.data;
   const todayEvents = scheduleService.getTodayEvents(events);
   const thisWeekEvents = scheduleService.getThisWeekEvents(events).slice(0, 5);
-  const latestAnnouncements = announcementService.getLatestAnnouncements(3);
+  const latestAnnouncements = announcementResult.data;
   const newDocuments = documentService.getNewDocuments(3);
   const latestNotifications = notificationService.getLatestNotifications(3);
 
@@ -47,9 +48,9 @@ export default async function HomePage() {
         </div>
       </header>
 
-      {scheduleResult.error || attendanceDashboard.error ? (
+      {scheduleResult.error || attendanceDashboard.error || announcementResult.error ? (
         <section className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-800">
-          {attendanceDashboard.error ?? scheduleResult.error}
+          {attendanceDashboard.error ?? scheduleResult.error ?? announcementResult.error}
         </section>
       ) : null}
 

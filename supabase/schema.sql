@@ -222,6 +222,8 @@ create table if not exists public.announcements (
   updated_at timestamptz not null default now()
 );
 
+alter table public.announcements add column if not exists deleted_at timestamptz;
+
 create index if not exists idx_fiscal_years_lom_year on public.fiscal_years(lom_id, year);
 create index if not exists idx_members_lom_status on public.members(lom_id, status);
 create index if not exists idx_assignments_year_member on public.annual_member_assignments(fiscal_year_id, member_id);
@@ -256,6 +258,7 @@ grant insert, update on public.annual_member_assignments to anon, authenticated;
 grant insert, update on public.committee_memberships to anon, authenticated;
 grant insert, update on public.events to anon, authenticated;
 grant insert, update on public.attendance_responses to anon, authenticated;
+grant insert, update on public.announcements to anon, authenticated;
 alter default privileges in schema public grant select on tables to anon, authenticated;
 
 -- Development-only read policies.
@@ -287,6 +290,8 @@ drop policy if exists "dev_insert_events" on public.events;
 drop policy if exists "dev_update_events" on public.events;
 drop policy if exists "dev_insert_attendance_responses" on public.attendance_responses;
 drop policy if exists "dev_update_attendance_responses" on public.attendance_responses;
+drop policy if exists "dev_insert_announcements" on public.announcements;
+drop policy if exists "dev_update_announcements" on public.announcements;
 
 create policy "dev_select_loms" on public.loms for select using (true);
 create policy "dev_select_fiscal_years" on public.fiscal_years for select using (true);
@@ -314,3 +319,5 @@ create policy "dev_insert_events" on public.events for insert with check (true);
 create policy "dev_update_events" on public.events for update using (true) with check (true);
 create policy "dev_insert_attendance_responses" on public.attendance_responses for insert with check (true);
 create policy "dev_update_attendance_responses" on public.attendance_responses for update using (true) with check (true);
+create policy "dev_insert_announcements" on public.announcements for insert with check (true);
+create policy "dev_update_announcements" on public.announcements for update using (true) with check (true);

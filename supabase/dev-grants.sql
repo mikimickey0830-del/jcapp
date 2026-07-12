@@ -11,6 +11,7 @@ grant insert, update on public.annual_member_assignments to anon, authenticated;
 grant insert, update on public.committee_memberships to anon, authenticated;
 grant insert, update on public.events to anon, authenticated;
 grant insert, update on public.attendance_responses to anon, authenticated;
+grant insert, update on public.announcements to anon, authenticated;
 alter default privileges in schema public grant select on tables to anon, authenticated;
 
 alter table public.committees add column if not exists description text;
@@ -31,6 +32,7 @@ alter table public.events add column if not exists bring_items text;
 alter table public.events add column if not exists dress_code text;
 alter table public.events add column if not exists notes text;
 alter table public.events add column if not exists deleted_at timestamptz;
+alter table public.announcements add column if not exists deleted_at timestamptz;
 
 create table if not exists public.committee_memberships (
   id uuid primary key default gen_random_uuid(),
@@ -87,6 +89,8 @@ drop policy if exists "dev_insert_events" on public.events;
 drop policy if exists "dev_update_events" on public.events;
 drop policy if exists "dev_insert_attendance_responses" on public.attendance_responses;
 drop policy if exists "dev_update_attendance_responses" on public.attendance_responses;
+drop policy if exists "dev_insert_announcements" on public.announcements;
+drop policy if exists "dev_update_announcements" on public.announcements;
 
 create policy "dev_insert_members" on public.members for insert with check (true);
 create policy "dev_update_members" on public.members for update using (true) with check (true);
@@ -103,5 +107,7 @@ create policy "dev_insert_events" on public.events for insert with check (true);
 create policy "dev_update_events" on public.events for update using (true) with check (true);
 create policy "dev_insert_attendance_responses" on public.attendance_responses for insert with check (true);
 create policy "dev_update_attendance_responses" on public.attendance_responses for update using (true) with check (true);
+create policy "dev_insert_announcements" on public.announcements for insert with check (true);
+create policy "dev_update_announcements" on public.announcements for update using (true) with check (true);
 
 notify pgrst, 'reload schema';

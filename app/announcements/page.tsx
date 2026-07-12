@@ -1,96 +1,88 @@
 import Link from "next/link";
+import { unstable_noStore as noStore } from "next/cache";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusPill } from "@/components/StatusPill";
-import { useAnnouncements } from "@/hooks/useAnnouncements";
+import { announcementService } from "@/services/announcementService";
 
-export default function AnnouncementsPage() {
-  const {
-    announcements,
-    announcementImportanceLabels,
-    announcementImportanceTones,
-    announcementTypeLabels,
-    announcementTypeTones,
-    announcementVisibilityLabels,
-    getAnnouncementAuthor
-  } = useAnnouncements();
+export const dynamic = "force-dynamic";
+
+export default async function AnnouncementsPage() {
+  noStore();
+  const result = await announcementService.getAnnouncements();
+  const announcements = result.data;
+  const importantCount = announcements.filter((announcement) => announcement.importance !== "normal").length;
+  const fiscalYearCount = new Set(announcements.map((announcement) => announcement.fiscalYearId)).size;
 
   return (
     <AppShell>
       <PageHeader
         action={{ href: "/announcements/new", label: "新規作成" }}
-        description="連絡事項、例会案内、締切案内、資料追加案内を年度・LOM・委員会に紐づけて管理します。"
+        description="全体連絡、例会案内、締切案内、資料追加案内を年度・LOM・委員会単位で管理します。"
         title="お知らせ"
       />
 
-      <section className="rounded-md border border-jc-line bg-white p-4 shadow-sm">
-        <label className="block">
-          <span className="mb-2 block text-sm font-semibold text-slate-700">お知らせ検索</span>
-          <input
-            className="min-h-12 w-full rounded-md border border-jc-line bg-slate-50 px-3 text-base outline-none focus:border-jc-blue focus:bg-white focus:ring-4 focus:ring-blue-100"
-            placeholder="タイトル・本文で検索"
-            type="search"
-          />
-        </label>
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <select className="min-h-12 rounded-md border border-jc-line bg-slate-50 px-3 text-sm font-semibold text-slate-700">
-            <option>すべての種別</option>
-            {Object.values(announcementTypeLabels).map((label) => (
-              <option key={label}>{label}</option>
-            ))}
-          </select>
-          <select className="min-h-12 rounded-md border border-jc-line bg-slate-50 px-3 text-sm font-semibold text-slate-700">
-            <option>すべての公開範囲</option>
-            {Object.values(announcementVisibilityLabels).map((label) => (
-              <option key={label}>{label}</option>
-            ))}
-          </select>
-        </div>
-      </section>
+      <DataSourceNotice error={result.error} source={result.source} />
 
-      <section className="mt-5 grid grid-cols-3 gap-3">
-        <SummaryCard label="件数" value={String(announcements.length)} />
-        <SummaryCard
-          label="重要以上"
-          value={String(announcements.filter((announcement) => announcement.importance !== "normal").length)}
-        />
-        <SummaryCard label="年度" value="2026" />
+      <section className="grid grid-cols-3 gap-3">
+        <SummaryCard label="お知らせ" value={String(announcements.length)} />
+        <SummaryCard label="重要・至急" value={String(importantCount)} />
+        <SummaryCard label="対象年度" value={String(fiscalYearCount)} />
       </section>
 
       <section className="mt-5 space-y-3">
-        {announcements.map((announcement) => (
-          <Link
-            className="block rounded-md border border-jc-line bg-white p-4 shadow-sm transition hover:border-jc-blue hover:shadow-soft"
-            href={`/announcements/${announcement.id}`}
-            key={announcement.id}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-500">
-                  {announcement.fiscalYear}年度 / {announcement.targetLom}
-                </p>
-                <h2 className="mt-1 text-lg font-bold text-slate-900">{announcement.title}</h2>
+        {announcements.length > 0 ? (
+          announcements.map((announcement) => (
+            <Link
+              className="block rounded-md border border-jc-line bg-white p-4 shadow-sm transition hover:border-jc-blue hover:shadow-soft"
+              href={`/announcements/${announcement.id}`}
+              key={announcement.id}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-slate-500">
+                    {announcement.fiscalYearName} / {announcement.targetLom}
+                  </p>
+                  <h2 className="mt-1 text-lg font-bold text-slate-900">{announcement.title}</h2>
+                </div>
+                <StatusPill
+                  label={announcementService.announcementImportanceLabels[announcement.importance]}
+                  tone={announcementService.announcementImportanceTones[announcement.importance]}
+                />
               </div>
-              <StatusPill
-                label={announcementImportanceLabels[announcement.importance]}
-                tone={announcementImportanceTones[announcement.importance]}
-              />
-            </div>
-            <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-600">{announcement.body}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <StatusPill label={announcementTypeLabels[announcement.type]} tone={announcementTypeTones[announcement.type]} />
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                {announcementVisibilityLabels[announcement.visibility]}
-              </span>
-            </div>
-            <p className="mt-3 text-xs font-semibold text-slate-500">
-              {announcement.publishStartAt} / {getAnnouncementAuthor(announcement)}
-            </p>
-          </Link>
-        ))}
+              <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-600">{announcement.body}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <StatusPill
+                  label={announcementService.announcementTypeLabels[announcement.type]}
+                  tone={announcementService.announcementTypeTones[announcement.type]}
+                />
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                  {announcementService.announcementVisibilityLabels[announcement.visibility]}
+                </span>
+                {announcement.targetCommittee ? (
+                  <span className="rounded-full bg-jc-sky px-2.5 py-1 text-xs font-semibold text-jc-blue">
+                    {announcement.targetCommittee}
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-3 text-xs font-semibold text-slate-500">
+                {formatDateTime(announcement.publishStartAt)} / {announcement.authorMemberName}
+              </p>
+            </Link>
+          ))
+        ) : (
+          <p className="rounded-md border border-dashed border-jc-line bg-white p-4 text-sm leading-6 text-slate-600">
+            表示できるお知らせはありません。
+          </p>
+        )}
       </section>
     </AppShell>
   );
+}
+
+function DataSourceNotice({ error, source }: { error: string | null; source: "supabase" | "fallback" }) {
+  if (!error && source === "supabase") return null;
+  return <section className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-800">{error}</section>;
 }
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
@@ -100,4 +92,13 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
       <p className="mt-1 text-xs font-semibold text-slate-600">{label}</p>
     </article>
   );
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("ja-JP", {
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(value));
 }

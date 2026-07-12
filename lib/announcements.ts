@@ -50,24 +50,32 @@ export const announcementImportanceTones: Record<AnnouncementImportance, StatusT
 export const announcements: Announcement[] = [
   {
     id: "a001",
+    lomId: "00000000-0000-0000-0000-000000000001",
+    fiscalYearId: "10000000-0000-0000-0000-000000002026",
+    fiscalYearName: "2026年度",
     title: "7月例会の出欠回答をお願いします",
     body:
       "7月例会の開催案内です。出欠回答期限は7月15日です。各委員会で参加予定者を確認し、期限内の回答をお願いします。",
     type: "regular_meeting",
     fiscalYear: 2026,
     targetLom: "玉島青年会議所",
+    targetCommitteeId: "30000000-0000-0000-0000-000000000001",
     targetCommittee: "全委員会",
     visibility: "members",
     importance: "important",
     publishStartAt: "2026-07-01 09:00",
     publishEndAt: "2026-07-20 23:59",
     authorMemberId: "m001",
+    authorMemberName: "山田 太郎",
     createdAt: "2026-07-01 09:00",
     updatedAt: "2026-07-03 18:30",
     notificationType: "announcement"
   },
   {
     id: "a002",
+    lomId: "00000000-0000-0000-0000-000000000001",
+    fiscalYearId: "10000000-0000-0000-0000-000000002026",
+    fiscalYearName: "2026年度",
     title: "理事会資料を追加しました",
     body:
       "第7回理事会の資料を資料共有に追加しました。議案書、前回議事録、参考資料を事前に確認してください。",
@@ -78,24 +86,30 @@ export const announcements: Announcement[] = [
     importance: "normal",
     publishStartAt: "2026-07-05 12:00",
     authorMemberId: "m002",
+    authorMemberName: "佐藤 花子",
     createdAt: "2026-07-05 12:00",
     updatedAt: "2026-07-05 12:00",
     notificationType: "announcement"
   },
   {
     id: "a003",
+    lomId: "00000000-0000-0000-0000-000000000001",
+    fiscalYearId: "10000000-0000-0000-0000-000000002026",
+    fiscalYearName: "2026年度",
     title: "事業計画書の提出期限について",
     body:
       "各委員会の事業計画書は7月25日までに事務局へ提出してください。修正が必要な場合は委員長へ早めに共有してください。",
     type: "deadline",
     fiscalYear: 2026,
     targetLom: "玉島青年会議所",
+    targetCommitteeId: "30000000-0000-0000-0000-000000000003",
     targetCommittee: "各委員会",
     visibility: "committee",
     importance: "urgent",
     publishStartAt: "2026-07-08 08:30",
     publishEndAt: "2026-07-25 23:59",
     authorMemberId: "m003",
+    authorMemberName: "田中 健一",
     createdAt: "2026-07-08 08:30",
     updatedAt: "2026-07-08 08:30",
     notificationType: "announcement"
