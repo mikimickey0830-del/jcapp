@@ -2,7 +2,7 @@ import { documentService } from "@/services/documentService";
 
 export function useDocuments() {
   return {
-    documents: documentService.getDocuments(),
+    documents: documentService.getNewDocuments(100),
     categoryLabels: documentService.categoryLabels,
     fileTypeLabels: documentService.fileTypeLabels,
     visibilityLabels: documentService.visibilityLabels,
@@ -14,7 +14,7 @@ export function useDocuments() {
 
 export function useDocument(documentId: string) {
   return {
-    document: documentService.getDocumentById(documentId),
+    document: documentService.getNewDocuments(100).find((item) => item.id === documentId),
     categoryLabels: documentService.categoryLabels,
     fileTypeLabels: documentService.fileTypeLabels,
     visibilityLabels: documentService.visibilityLabels,
