@@ -7,7 +7,7 @@ const managementRoles: AnnualRole[] = ["admin", "president", "secretary"];
 
 type MemberRow = {
   id: string;
-  auth_user_id: string;
+  auth_user_id: string | null;
   lom_id: string;
   last_name: string;
   first_name: string;
@@ -15,6 +15,56 @@ type MemberRow = {
 };
 
 type AssignmentRow = { role: AnnualRole; is_active: boolean };
+
+type AuthenticatedUser = {
+  id: string;
+  email?: string;
+};
+
+async function findLinkedMember(supabase: NonNullable<ReturnType<typeof createClient>>, user: AuthenticatedUser) {
+  const { data: linkedMember, error: linkedMemberError } = await supabase
+    .from("members")
+    .select("id, auth_user_id, lom_id, last_name, first_name, email")
+    .eq("auth_user_id", user.id)
+    .maybeSingle();
+
+  if (linkedMemberError || linkedMember || !user.email) {
+    return { member: linkedMember as MemberRow | null, error: linkedMemberError?.message ?? null };
+  }
+
+  // Link a first-time login only when its email identifies one unlinked member.
+  // A duplicate email never links automatically, so multi-LOM data stays safe.
+  const { data: emailMatches, error: emailLookupError } = await supabase
+    .from("members")
+    .select("id, auth_user_id, lom_id, last_name, first_name, email")
+    .eq("email", user.email.trim().toLowerCase())
+    .limit(2);
+
+  if (emailLookupError || !emailMatches || emailMatches.length !== 1) {
+    return { member: null, error: emailLookupError?.message ?? null };
+  }
+
+  const candidate = emailMatches[0] as MemberRow;
+  if (candidate.auth_user_id) {
+    return { member: null, error: null };
+  }
+
+  const now = new Date().toISOString();
+  const { data: linkedByEmail, error: linkError } = await supabase
+    .from("members")
+    .update({
+      auth_user_id: user.id,
+      invitation_status: "active",
+      activated_at: now,
+      updated_at: now,
+    })
+    .eq("id", candidate.id)
+    .is("auth_user_id", null)
+    .select("id, auth_user_id, lom_id, last_name, first_name, email")
+    .maybeSingle();
+
+  return { member: linkedByEmail as MemberRow | null, error: linkError?.message ?? null };
+}
 
 async function getCurrentAuthContext(): Promise<AuthContext> {
   const supabase = createClient();
@@ -36,11 +86,7 @@ async function getCurrentAuthContext(): Promise<AuthContext> {
     };
   }
 
-  const { data: memberData, error: memberError } = await supabase
-    .from("members")
-    .select("id, auth_user_id, lom_id, last_name, first_name, email")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
+  const { member: memberData, error: memberError } = await findLinkedMember(supabase, user);
 
   if (memberError || !memberData) {
     return {
@@ -48,7 +94,7 @@ async function getCurrentAuthContext(): Promise<AuthContext> {
       userEmail: user.email,
       isAuthenticated: true,
       canManage: false,
-      error: memberError?.message ?? null,
+      error: memberError,
     };
   }
 
@@ -61,7 +107,7 @@ async function getCurrentAuthContext(): Promise<AuthContext> {
   const roles = ((assignmentData ?? []) as AssignmentRow[]).map((item) => item.role);
   const member: AuthMember = {
     id: row.id,
-    authUserId: row.auth_user_id,
+    authUserId: row.auth_user_id ?? user.id,
     lomId: row.lom_id,
     name: `${row.last_name} ${row.first_name}`,
     email: row.email,
