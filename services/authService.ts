@@ -36,38 +36,23 @@ async function findLinkedMember(supabase: NonNullable<ReturnType<typeof createCl
     return { member: linkedMember as MemberRow | null, error: linkedMemberError?.message ?? null };
   }
 
-  // Link a first-time login only when its email identifies one unlinked member.
-  // A duplicate email never links automatically, so multi-LOM data stays safe.
-  const { data: emailMatches, error: emailLookupError } = await supabase
-    .from("members")
-    .select("id, auth_user_id, lom_id, last_name, first_name, email")
-    .eq("email", user.email.trim().toLowerCase())
-    .limit(2);
-
-  if (emailLookupError || !emailMatches || emailMatches.length !== 1) {
-    return { member: null, error: emailLookupError?.message ?? null };
+  // RLS prevents an unlinked user from reading the member directory. The RPC
+  // links only one exact email match and keeps protected columns server-owned.
+  const { data: linkedMemberId, error: linkError } = await supabase.rpc("link_current_member_by_email");
+  if (linkError || !linkedMemberId) {
+    return { member: null, error: linkError?.message ?? null };
   }
 
-  const candidate = emailMatches[0] as MemberRow;
-  if (candidate.auth_user_id) {
-    return { member: null, error: null };
-  }
-
-  const now = new Date().toISOString();
-  const { data: linkedByEmail, error: linkError } = await supabase
+  const { data: linkedByEmail, error: linkedByEmailError } = await supabase
     .from("members")
-    .update({
-      auth_user_id: user.id,
-      invitation_status: "active",
-      activated_at: now,
-      updated_at: now,
-    })
-    .eq("id", candidate.id)
-    .is("auth_user_id", null)
     .select("id, auth_user_id, lom_id, last_name, first_name, email")
+    .eq("id", linkedMemberId)
     .maybeSingle();
 
-  return { member: linkedByEmail as MemberRow | null, error: linkError?.message ?? null };
+  return {
+    member: linkedByEmail as MemberRow | null,
+    error: linkedByEmailError?.message ?? null,
+  };
 }
 
 async function getCurrentAuthContext(): Promise<AuthContext> {
