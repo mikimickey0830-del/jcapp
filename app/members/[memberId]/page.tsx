@@ -2,10 +2,12 @@ import Link from "next/link";
 import { unstable_noStore as noStore } from "next/cache";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { MemberInvitationActions } from "@/components/MemberInvitationActions";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusPill } from "@/components/StatusPill";
 import { committeeRoleLabels } from "@/lib/assignments";
 import { memberService } from "@/services/memberService";
+import { authService } from "@/services/authService";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -19,6 +21,7 @@ const statusTone = {
 export default async function MemberDetailPage({ params }: { params: { memberId: string } }) {
   noStore();
   const { data: member, error, source } = await memberService.getMemberById(params.memberId);
+  const authContext = await authService.getCurrentAuthContext();
   const { roleLabels, statusLabels } = memberService;
 
   if (!member) {
@@ -35,6 +38,14 @@ export default async function MemberDetailPage({ params }: { params: { memberId:
       />
 
       <DataSourceNotice error={error} source={source} />
+
+      <MemberInvitationActions
+        authUserId={member.authUserId}
+        canManage={authContext.canManage}
+        email={member.email}
+        invitationStatus={member.invitationStatus}
+        memberId={member.id}
+      />
 
       <section className="rounded-md border border-jc-line bg-white p-4 shadow-sm">
         <div className="flex items-start justify-between gap-3">

@@ -34,16 +34,16 @@ function protectRoute(
   isAuthenticated: boolean,
 ) {
   const pathname = request.nextUrl.pathname;
-  const isLoginPage = pathname === "/login";
+  const isPublicAuthRoute = pathname === "/login" || pathname === "/auth/callback" || pathname === "/auth/accept-invite";
 
-  if (!isAuthenticated && !isLoginPage) {
+  if (!isAuthenticated && !isPublicAuthRoute) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(loginUrl);
   }
 
-  if (isAuthenticated && isLoginPage) {
+  if (isAuthenticated && pathname === "/login") {
     const homeUrl = request.nextUrl.clone();
     homeUrl.pathname = "/";
     homeUrl.search = "";

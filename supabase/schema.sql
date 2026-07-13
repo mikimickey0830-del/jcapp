@@ -30,6 +30,10 @@ create table if not exists public.members (
   id uuid primary key default gen_random_uuid(),
   lom_id uuid not null references public.loms(id) on delete cascade,
   auth_user_id uuid unique references auth.users(id) on delete set null,
+  invitation_status text not null default 'not_invited' check (invitation_status in ('not_invited', 'invited', 'active', 'failed')),
+  invited_at timestamptz,
+  activated_at timestamptz,
+  invitation_last_sent_at timestamptz,
   last_name text not null,
   first_name text not null,
   last_name_kana text not null,
@@ -44,6 +48,10 @@ create table if not exists public.members (
 );
 
 alter table public.members add column if not exists auth_user_id uuid;
+alter table public.members add column if not exists invitation_status text not null default 'not_invited';
+alter table public.members add column if not exists invited_at timestamptz;
+alter table public.members add column if not exists activated_at timestamptz;
+alter table public.members add column if not exists invitation_last_sent_at timestamptz;
 create unique index if not exists idx_members_auth_user_id
   on public.members(auth_user_id) where auth_user_id is not null;
 
@@ -52,6 +60,14 @@ begin
   if not exists (select 1 from pg_constraint where conname = 'members_auth_user_id_fkey') then
     alter table public.members add constraint members_auth_user_id_fkey
       foreign key (auth_user_id) references auth.users(id) on delete set null;
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'members_invitation_status_check') then
+    alter table public.members add constraint members_invitation_status_check
+      check (invitation_status in ('not_invited', 'invited', 'active', 'failed'));
   end if;
 end $$;
 
@@ -236,8 +252,18 @@ create table if not exists public.announcements (
 
 alter table public.announcements add column if not exists deleted_at timestamptz;
 
+create table if not exists public.auth_invitation_audit_logs (
+  id uuid primary key default gen_random_uuid(),
+  member_id uuid references public.members(id) on delete set null,
+  actor_auth_user_id uuid references auth.users(id) on delete set null,
+  action text not null check (action in ('invited', 'resent', 'activated', 'failed')),
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
 create index if not exists idx_fiscal_years_lom_year on public.fiscal_years(lom_id, year);
 create index if not exists idx_members_lom_status on public.members(lom_id, status);
+create index if not exists idx_members_invitation_status on public.members(lom_id, invitation_status);
 create index if not exists idx_assignments_year_member on public.annual_member_assignments(fiscal_year_id, member_id);
 create index if not exists idx_committee_memberships_committee on public.committee_memberships(committee_id, deleted_at);
 create index if not exists idx_committee_memberships_member_year on public.committee_memberships(member_id, fiscal_year_id, deleted_at);
@@ -246,6 +272,7 @@ create index if not exists idx_attendance_event_status on public.attendance_resp
 create index if not exists idx_documents_year_uploaded_at on public.documents(fiscal_year_id, uploaded_at desc);
 create index if not exists idx_notifications_member_created_at on public.notifications(member_id, created_at desc);
 create index if not exists idx_announcements_year_publish on public.announcements(fiscal_year_id, publish_start_at desc);
+create index if not exists idx_auth_invitation_audit_member_created on public.auth_invitation_audit_logs(member_id, created_at desc);
 
 alter table public.loms enable row level security;
 alter table public.fiscal_years enable row level security;
@@ -259,6 +286,7 @@ alter table public.attendance_responses enable row level security;
 alter table public.documents enable row level security;
 alter table public.notifications enable row level security;
 alter table public.announcements enable row level security;
+alter table public.auth_invitation_audit_logs enable row level security;
 
 grant usage on schema public to anon, authenticated;
 grant select on all tables in schema public to anon, authenticated;

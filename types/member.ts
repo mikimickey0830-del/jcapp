@@ -3,6 +3,8 @@ import type { CommitteeMemberRole } from "@/types/committee";
 
 export type MemberStatus = "active" | "inactive" | "graduated";
 
+export type InvitationStatus = "not_invited" | "invited" | "active" | "failed";
+
 export type AnnualMemberProfile = {
   fiscalYear: number;
   committee: string;
@@ -20,6 +22,10 @@ export type Member = {
   id: string;
   authUserId?: string;
   lomId?: string;
+  invitationStatus?: InvitationStatus;
+  invitedAt?: string;
+  activatedAt?: string;
+  invitationLastSentAt?: string;
   lastName: string;
   firstName: string;
   lastNameKana: string;

@@ -46,6 +46,10 @@ LOMを管理します。
 - `id`: uuid primary key
 - `lom_id`: uuid references `loms.id`
 - `auth_user_id`: uuid
+- `invitation_status`: not_invited / invited / active / failed
+- `invited_at`: timestamptz
+- `activated_at`: timestamptz
+- `invitation_last_sent_at`: timestamptz
 - `last_name`: text
 - `first_name`: text
 - `last_name_kana`: text
@@ -66,6 +70,17 @@ LOMを管理します。
 - `fiscal_year_id`: uuid references `fiscal_years.id`
 - `name`: text
 - `sort_order`: integer
+- `created_at`: timestamptz
+
+### auth_invitation_audit_logs
+
+会員招待とAuth自動紐付けの監査ログを管理します。サービスロールだけが書き込み、RLSによりブラウザからは直接参照・更新しません。
+
+- `id`: uuid primary key
+- `member_id`: uuid references `members.id`
+- `actor_auth_user_id`: uuid references `auth.users.id`
+- `action`: invited / resent / activated / failed
+- `metadata`: jsonb
 - `created_at`: timestamptz
 
 ### positions
@@ -209,7 +224,9 @@ LOMを管理します。
 - 出欠回答は本人だけ更新できます。
 - 現在年度の `admin`、`president`、`secretary` はLOM内の管理対象を更新できます。
 - 通知は本人宛て、または管理役職だけが閲覧できます。
-- ブラウザには公開キーだけを置き、`service_role` キーは使用しません。
+- ブラウザには公開キーだけを置きます。SupabaseのSecret keyまたは従来のservice role keyは、招待メール送信のRoute Handlerだけでサーバー側に限定して使用します。
+- 招待メール送信で使うSecret keyは、ブラウザ、Client Component、ログ、GitHubへは渡しません。
+- 招待の自動紐付けは `user_metadata.member_id` を優先し、招待メールとの一致を確認します。該当しない場合のみメールアドレスで1件に特定できる会員へ紐付けます。
 
 `supabase/auth-schema-migration.sql` はAuth導入時に実行します。
 `supabase/production-rls.sql` は全利用者のAuth紐付けと本番検証が完了してから実行します。

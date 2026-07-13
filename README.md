@@ -27,6 +27,8 @@ pnpm dev
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-publishable-or-anon-key
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+SUPABASE_SECRET_KEY=your-server-only-secret-key
 ```
 
 `.env.local` はGitにコミットしません。
@@ -149,18 +151,55 @@ git push
 - AI議事録
 - 会費決済
 - QR受付
-## Supabase Auth設定
+## Supabase Auth・会員招待設定
 
-1. SupabaseのAuthenticationからメール・パスワードのユーザーを作成します。
-2. `supabase/auth-schema-migration.sql` をSQL Editorで実行します。
-3. 作成したAuthユーザーのUUIDを対象会員の `members.auth_user_id` に設定します。
-4. `.env.local` に公開URLと公開キーを設定して開発サーバーを再起動します。
+会員の利用開始は、管理者が会員画面の「招待メールを送る」を押す運用です。Auth User UIDのコピーや、`members.auth_user_id` の手動SQL更新は本番運用では不要です。
 
-```sql
-update public.members
-set auth_user_id = '<Authentication Users画面のUser UID>'
-where email = '<作成したログインメールアドレス>';
+### 1. SQLを反映する
+
+Supabase Dashboard の **SQL Editor** を開き、次の順に実行します。
+
+1. 初回のみ `supabase/schema.sql`
+2. 初回のみ `supabase/seed.sql`
+3. Auth導入済みでない場合は `supabase/auth-schema-migration.sql`
+4. `supabase/auth-invitation-migration.sql`
+
+既存環境では通常、手順4だけで招待状態と監査ログを追加できます。
+
+### 2. サーバー専用Secret keyを設定する
+
+1. Supabase Dashboard の **Project Settings** → **API Keys** を開きます。
+2. **Secret keys** にある `default` のコピーアイコンを押します。
+3. プロジェクト直下の `.env.local` に、値を貼り付けます。
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-publishable-key
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+SUPABASE_SECRET_KEY=sb_secret_...
 ```
 
-未ログイン時は `/login` へ移動します。本番RLSへの切替は、全会員の紐付けと
-動作確認後に `supabase/production-rls.sql` を実行してください。
+`SUPABASE_SECRET_KEY` はサーバーの招待APIだけが使用します。`NEXT_PUBLIC_` を付けず、GitHub、ブラウザ、画面、ログへ絶対に出さないでください。従来形式のキーを使う場合だけ `SUPABASE_SERVICE_ROLE_KEY` を代わりに設定できます。
+
+### 3. AuthenticationのURL設定
+
+Supabase Dashboard の **Authentication** → **URL Configuration** を開き、以下を設定します。
+
+- **Site URL**: ローカル開発時は `http://localhost:3000`。Vercel公開後は本番URLに変更します。
+- **Redirect URLs**: `http://localhost:3000/auth/callback` と `http://localhost:3000/auth/accept-invite` を追加します。
+- Vercel公開後は `https://<your-domain>/auth/callback` と `https://<your-domain>/auth/accept-invite` も追加します。
+
+Vercelでは同じ3つの環境変数を Project Settings → Environment Variables に設定し、`NEXT_PUBLIC_SITE_URL` を本番URLへ変更して再デプロイします。
+
+### 4. 招待メールを確認する
+
+Supabase Dashboard の **Authentication** → **Email Templates** → **Invite user** で件名と本文を確認します。テンプレートには招待リンク用の `{{ .ConfirmationURL }}` を残してください。
+
+### 5. 運用フロー
+
+1. 管理者が会員を登録します。
+2. `/members` または会員詳細の「招待メールを送る」を押します。
+3. 会員はメールのリンクを開き、`/auth/accept-invite` で8文字以上のパスワードを設定します。
+4. `members.auth_user_id` と招待状態がサーバー側で自動更新され、そのままダッシュボードへ移動します。
+
+未ログイン時は `/login` へ移動します。本番RLSへの切替は、全会員の紐付けと動作確認後に `supabase/production-rls.sql` を実行してください。

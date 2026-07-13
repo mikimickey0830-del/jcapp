@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { unstable_noStore as noStore } from "next/cache";
 import { AppShell } from "@/components/AppShell";
+import { MemberInvitationActions } from "@/components/MemberInvitationActions";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusPill } from "@/components/StatusPill";
+import { authService } from "@/services/authService";
 import { memberService } from "@/services/memberService";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +19,7 @@ const statusTone = {
 export default async function MembersPage() {
   noStore();
   const { data: members, error, source } = await memberService.getMembers();
+  const authContext = await authService.getCurrentAuthContext();
   const { getCurrentAnnualProfile, roleLabels, statusLabels } = memberService;
   const activeCount = members.filter((member) => member.status === "active").length;
 
@@ -41,11 +44,8 @@ export default async function MembersPage() {
           const annualProfile = getCurrentAnnualProfile(member);
 
           return (
-            <Link
-              className="block rounded-md border border-jc-line bg-white p-4 shadow-sm transition hover:border-jc-blue hover:shadow-soft"
-              href={`/members/${member.id}`}
-              key={member.id}
-            >
+            <article className="rounded-md border border-jc-line bg-white p-4 shadow-sm" key={member.id}>
+              <Link className="block transition hover:text-jc-blue" href={`/members/${member.id}`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold text-slate-500">
@@ -72,7 +72,16 @@ export default async function MembersPage() {
                 <span>{member.email}</span>
                 <span>{member.phone}</span>
               </div>
-            </Link>
+              </Link>
+              <MemberInvitationActions
+                authUserId={member.authUserId}
+                canManage={authContext.canManage}
+                compact
+                email={member.email}
+                invitationStatus={member.invitationStatus}
+                memberId={member.id}
+              />
+            </article>
           );
         })}
       </section>

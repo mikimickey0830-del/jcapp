@@ -2,7 +2,7 @@ import { getCurrentAnnualProfile, getMember, members, roleLabels as fallbackRole
 import { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
 import type { CommitteeMemberRole } from "@/types/committee";
 import type { AnnualRole } from "@/types/common";
-import type { AnnualMemberProfile, Member, MemberStatus } from "@/types/member";
+import type { AnnualMemberProfile, InvitationStatus, Member, MemberStatus } from "@/types/member";
 
 type MemberQueryResult = {
   data: Member[];
@@ -36,6 +36,10 @@ type SupabaseCommitteeMembershipRow = {
 type SupabaseMemberRow = {
   id: string;
   auth_user_id: string | null;
+  invitation_status: InvitationStatus | null;
+  invited_at: string | null;
+  activated_at: string | null;
+  invitation_last_sent_at: string | null;
   lom_id: string;
   last_name: string;
   first_name: string;
@@ -53,6 +57,10 @@ type SupabaseMemberRow = {
 const memberSelect = `
   id,
   auth_user_id,
+  invitation_status,
+  invited_at,
+  activated_at,
+  invitation_last_sent_at,
   lom_id,
   last_name,
   first_name,
@@ -142,6 +150,10 @@ function toMember(row: SupabaseMemberRow): Member {
     id: row.id,
     authUserId: row.auth_user_id ?? undefined,
     lomId: row.lom_id,
+    invitationStatus: row.auth_user_id ? "active" : row.invitation_status ?? "not_invited",
+    invitedAt: row.invited_at ?? undefined,
+    activatedAt: row.activated_at ?? undefined,
+    invitationLastSentAt: row.invitation_last_sent_at ?? undefined,
     lastName: row.last_name,
     firstName: row.first_name,
     lastNameKana: row.last_name_kana,
