@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
+import { requireManagement } from "@/lib/auth/requireManagement";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase/service";
 import type { MemberStatus } from "@/types/member";
 
 type MemberRequestBody = {
@@ -37,6 +38,8 @@ function validateMemberInput(body: MemberRequestBody) {
 }
 
 export async function PATCH(request: Request, { params }: { params: { memberId: string } }) {
+  const guard = await requireManagement();
+  if (guard.response) return guard.response;
   if (!isSupabaseConfigured || !supabase) {
     return NextResponse.json({ error: "Supabase環境変数が未設定です。" }, { status: 500 });
   }

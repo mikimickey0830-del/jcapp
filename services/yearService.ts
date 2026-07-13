@@ -4,7 +4,7 @@ import {
   getAssignmentRows,
   getFiscalYear
 } from "@/lib/years";
-import { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase/service";
 import type { AnnualRole } from "@/types/common";
 import type { AnnualAssignment, Committee, FiscalYear, FiscalYearStatus, Position } from "@/types/year";
 

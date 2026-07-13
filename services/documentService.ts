@@ -6,7 +6,7 @@ import {
   getSharedDocument as getFallbackDocument,
   sharedDocuments,
 } from "@/lib/documents";
-import { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase/service";
 import type { SharedDocument } from "@/types/document";
 
 const categoryLabels: Record<SharedDocument["category"], string> = {

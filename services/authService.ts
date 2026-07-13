@@ -14,7 +14,11 @@ type MemberRow = {
   email: string;
 };
 
-type AssignmentRow = { role: AnnualRole; is_active: boolean };
+type AssignmentRow = {
+  role: AnnualRole;
+  is_active: boolean;
+  fiscal_years: { is_current: boolean; status: "planned" | "current" | "closed" } | Array<{ is_current: boolean; status: "planned" | "current" | "closed" }> | null;
+};
 
 type AuthenticatedUser = {
   id: string;
@@ -101,17 +105,22 @@ async function getCurrentAuthContext(): Promise<AuthContext> {
   const row = memberData as MemberRow;
   const { data: assignmentData, error: assignmentError } = await supabase
     .from("annual_member_assignments")
-    .select("role, is_active")
+    .select("role, is_active, fiscal_years(is_current, status)")
     .eq("member_id", row.id)
     .eq("is_active", true);
-  const roles = ((assignmentData ?? []) as AssignmentRow[]).map((item) => item.role);
+  const currentRoles = ((assignmentData ?? []) as AssignmentRow[])
+    .filter((item) => {
+      const fiscalYear = Array.isArray(item.fiscal_years) ? item.fiscal_years[0] : item.fiscal_years;
+      return fiscalYear?.is_current === true || fiscalYear?.status === "current";
+    })
+    .map((item) => item.role);
   const member: AuthMember = {
     id: row.id,
     authUserId: row.auth_user_id ?? user.id,
     lomId: row.lom_id,
     name: `${row.last_name} ${row.first_name}`,
     email: row.email,
-    roles,
+    roles: currentRoles,
   };
 
   return {
@@ -119,7 +128,7 @@ async function getCurrentAuthContext(): Promise<AuthContext> {
     userEmail: user.email,
     member,
     isAuthenticated: true,
-    canManage: roles.some((role) => managementRoles.includes(role)),
+    canManage: currentRoles.some((role) => managementRoles.includes(role)),
     error: assignmentError?.message ?? null,
   };
 }

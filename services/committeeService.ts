@@ -1,7 +1,7 @@
 import { committees, getCommittee } from "@/lib/committees";
 import { members as fallbackMembers } from "@/lib/members";
 import { fiscalYears } from "@/lib/years";
-import { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase/service";
 import type {
   CommitteeDetail,
   CommitteeFormOptions,

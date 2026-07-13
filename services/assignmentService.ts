@@ -4,7 +4,7 @@ import {
   getFallbackAssignmentSummaries,
   getFallbackAssignmentYear
 } from "@/lib/assignments";
-import { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase/service";
 import type {
   AnnualMemberAssignmentView,
   AssignmentCommitteeMembership,

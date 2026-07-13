@@ -9,7 +9,7 @@ import {
   getUpcomingEvents,
   scheduleEvents
 } from "@/lib/schedule";
-import { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase/service";
 import type { EventFormOptions, EventType, ScheduleEvent } from "@/types/schedule";
 
 type Source = "supabase" | "fallback";

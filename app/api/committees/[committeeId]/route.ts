@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
+import { requireManagement } from "@/lib/auth/requireManagement";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase/service";
 import type { CommitteeMemberRole, CommitteeMutationPayload } from "@/types/committee";
 
 function uniqueMemberIds(body: CommitteeMutationPayload) {
@@ -104,6 +105,8 @@ async function syncCommitteeMemberships(committeeId: string, fiscalYearId: strin
 }
 
 export async function PATCH(request: Request, { params }: { params: { committeeId: string } }) {
+  const guard = await requireManagement();
+  if (guard.response) return guard.response;
   if (!isSupabaseConfigured || !supabase) {
     return NextResponse.json({ error: "Supabase環境変数が未設定です。" }, { status: 500 });
   }
@@ -156,6 +159,8 @@ export async function PATCH(request: Request, { params }: { params: { committeeI
 }
 
 export async function DELETE(_request: Request, { params }: { params: { committeeId: string } }) {
+  const guard = await requireManagement();
+  if (guard.response) return guard.response;
   if (!isSupabaseConfigured || !supabase) {
     return NextResponse.json({ error: "Supabase環境変数が未設定です。" }, { status: 500 });
   }

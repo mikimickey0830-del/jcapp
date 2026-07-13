@@ -75,7 +75,7 @@ export default async function MembersPage() {
               </Link>
               <MemberInvitationActions
                 authUserId={member.authUserId}
-                canManage={authContext.canManage}
+                canManage={authContext.canManage && source === "supabase"}
                 compact
                 email={member.email}
                 invitationStatus={member.invitationStatus}

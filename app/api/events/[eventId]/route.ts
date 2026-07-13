@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
+import { requireManagement } from "@/lib/auth/requireManagement";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase/service";
 import {
   getFiscalYearLomId,
   syncAttendanceResponses,
@@ -9,6 +10,8 @@ import {
 import type { EventMutationPayload } from "@/types/schedule";
 
 export async function PATCH(request: Request, { params }: { params: { eventId: string } }) {
+  const guard = await requireManagement();
+  if (guard.response) return guard.response;
   if (!isSupabaseConfigured || !supabase) {
     return NextResponse.json({ error: "Supabase環境変数が未設定です。" }, { status: 500 });
   }
@@ -37,6 +40,8 @@ export async function PATCH(request: Request, { params }: { params: { eventId: s
 }
 
 export async function DELETE(_request: Request, { params }: { params: { eventId: string } }) {
+  const guard = await requireManagement();
+  if (guard.response) return guard.response;
   if (!isSupabaseConfigured || !supabase) {
     return NextResponse.json({ error: "Supabase環境変数が未設定です。" }, { status: 500 });
   }

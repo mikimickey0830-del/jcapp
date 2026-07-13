@@ -1,5 +1,5 @@
 import { notifications as fallbackNotifications } from "@/lib/notifications";
-import { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase/service";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AppNotification, NotificationStatus, NotificationType } from "@/types/notification";
 

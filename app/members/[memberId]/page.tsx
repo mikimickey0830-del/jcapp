@@ -41,7 +41,7 @@ export default async function MemberDetailPage({ params }: { params: { memberId:
 
       <MemberInvitationActions
         authUserId={member.authUserId}
-        canManage={authContext.canManage}
+        canManage={authContext.canManage && source === "supabase"}
         email={member.email}
         invitationStatus={member.invitationStatus}
         memberId={member.id}

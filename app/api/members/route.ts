@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
+import { requireManagement } from "@/lib/auth/requireManagement";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase/service";
 import type { MemberStatus } from "@/types/member";
 
 type MemberRequestBody = {
@@ -56,6 +57,8 @@ async function getDefaultLomId() {
 }
 
 export async function POST(request: Request) {
+  const guard = await requireManagement();
+  if (guard.response) return guard.response;
   if (!isSupabaseConfigured || !supabase) {
     return NextResponse.json({ error: "Supabase環境変数が未設定です。" }, { status: 500 });
   }

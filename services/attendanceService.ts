@@ -7,7 +7,7 @@ import {
   getAttendanceSummary as getFallbackAttendanceSummary,
   getUnansweredAttendanceForMember as getFallbackUnansweredAttendanceForMember
 } from "@/lib/attendance";
-import { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase/service";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { scheduleService } from "@/services/scheduleService";
 import type {

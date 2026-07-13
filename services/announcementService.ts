@@ -11,7 +11,7 @@ import {
 import { committees as fallbackCommittees } from "@/lib/committees";
 import { members as fallbackMembers } from "@/lib/members";
 import { fiscalYears as fallbackFiscalYears } from "@/lib/years";
-import { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase/service";
 import type { Announcement, AnnouncementFormOptions } from "@/types/announcement";
 
 type Source = "supabase" | "fallback";

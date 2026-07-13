@@ -1,5 +1,5 @@
 import { getCurrentAnnualProfile, getMember, members, roleLabels as fallbackRoleLabels, statusLabels } from "@/lib/members";
-import { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase/service";
 import type { CommitteeMemberRole } from "@/types/committee";
 import type { AnnualRole } from "@/types/common";
 import type { AnnualMemberProfile, InvitationStatus, Member, MemberStatus } from "@/types/member";
@@ -85,6 +85,10 @@ const memberSelect = `
     committees(name)
   )
 `;
+
+const canUseFallbackData = process.env.NODE_ENV !== "production";
+const fallbackMembers = () => (canUseFallbackData ? members : []);
+const fallbackMember = (memberId: string) => (canUseFallbackData ? getMember(memberId) : undefined);
 
 export const roleLabels: Record<AnnualRole, string> = {
   ...fallbackRoleLabels,
@@ -173,7 +177,7 @@ function toMember(row: SupabaseMemberRow): Member {
 async function fetchMembersFromSupabase(): Promise<MemberQueryResult> {
   if (!isSupabaseConfigured || !supabase) {
     return {
-      data: members,
+      data: fallbackMembers(),
       error: "Supabase環境変数が未設定のため、仮データを表示しています。",
       source: "fallback"
     };
@@ -186,7 +190,7 @@ async function fetchMembersFromSupabase(): Promise<MemberQueryResult> {
 
   if (error) {
     return {
-      data: members,
+      data: fallbackMembers(),
       error: `Supabaseから会員一覧を取得できませんでした。仮データを表示しています。(${error.message})`,
       source: "fallback"
     };
@@ -202,7 +206,7 @@ async function fetchMembersFromSupabase(): Promise<MemberQueryResult> {
 async function fetchMemberFromSupabase(memberId: string): Promise<SingleMemberQueryResult> {
   if (!isSupabaseConfigured || !supabase) {
     return {
-      data: getMember(memberId),
+      data: fallbackMember(memberId),
       error: "Supabase環境変数が未設定のため、仮データを表示しています。",
       source: "fallback"
     };
@@ -216,7 +220,7 @@ async function fetchMemberFromSupabase(memberId: string): Promise<SingleMemberQu
 
   if (error) {
     return {
-      data: getMember(memberId),
+      data: fallbackMember(memberId),
       error: `Supabaseから会員詳細を取得できませんでした。仮データを表示しています。(${error.message})`,
       source: "fallback"
     };
@@ -224,7 +228,7 @@ async function fetchMemberFromSupabase(memberId: string): Promise<SingleMemberQu
 
   if (!data) {
     return {
-      data: getMember(memberId),
+      data: fallbackMember(memberId),
       error: null,
       source: "fallback"
     };
@@ -240,8 +244,8 @@ async function fetchMemberFromSupabase(memberId: string): Promise<SingleMemberQu
 export const memberService = {
   getMembers: fetchMembersFromSupabase,
   getMemberById: fetchMemberFromSupabase,
-  getFallbackMembers: () => members,
-  getFallbackMemberById: (memberId: string) => getMember(memberId),
+  getFallbackMembers: fallbackMembers,
+  getFallbackMemberById: fallbackMember,
   getCurrentAnnualProfile,
   roleLabels,
   statusLabels

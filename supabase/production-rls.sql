@@ -43,6 +43,9 @@ drop policy if exists "dev_select_documents" on public.documents;
 drop policy if exists "dev_select_notifications" on public.notifications;
 drop policy if exists "dev_select_announcements" on public.announcements;
 drop policy if exists "dev_update_members" on public.members;
+drop policy if exists "self_or_manager_update_members" on public.members;
+drop policy if exists "self_update_member_profile" on public.members;
+drop policy if exists "manager_update_members" on public.members;
 drop policy if exists "dev_insert_members" on public.members;
 drop policy if exists "dev_insert_fiscal_years" on public.fiscal_years;
 drop policy if exists "dev_insert_committees" on public.committees;
@@ -62,9 +65,17 @@ drop policy if exists "dev_update_announcements" on public.announcements;
 create policy "lom_read_loms" on public.loms for select to authenticated using (id = public.current_lom_id());
 create policy "lom_read_years" on public.fiscal_years for select to authenticated using (lom_id = public.current_lom_id());
 create policy "lom_read_members" on public.members for select to authenticated using (lom_id = public.current_lom_id());
-create policy "self_or_manager_update_members" on public.members for update to authenticated
-  using (id = public.current_member_id() or public.can_manage_lom(lom_id))
-  with check (lom_id = public.current_lom_id());
+-- Column grants prevent members from changing auth_user_id, lom_id, invitation
+-- state, or timestamps. Managers still pass the row-level can_manage_lom check.
+revoke update on public.members from authenticated;
+grant update (last_name, first_name, last_name_kana, first_name_kana, email, phone, joined_year, status, updated_at)
+  on public.members to authenticated;
+create policy "self_update_member_profile" on public.members for update to authenticated
+  using (id = public.current_member_id())
+  with check (id = public.current_member_id() and lom_id = public.current_lom_id() and auth_user_id = auth.uid() and invitation_status = 'active');
+create policy "manager_update_members" on public.members for update to authenticated
+  using (public.can_manage_lom(lom_id))
+  with check (public.can_manage_lom(lom_id));
 create policy "lom_read_committees" on public.committees for select to authenticated using (lom_id = public.current_lom_id());
 create policy "lom_read_positions" on public.positions for select to authenticated using (lom_id = public.current_lom_id());
 create policy "lom_read_assignments" on public.annual_member_assignments for select to authenticated using (lom_id = public.current_lom_id());
