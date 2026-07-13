@@ -201,3 +201,16 @@ LOMを管理します。
 - bucket: `documents`
 - path: `{lom_id}/{fiscal_year_id}/{event_id_or_general}/{file_name}`
 - 閲覧権限は `documents.visibility` と年度所属・役職で制御する。
+## Supabase Authと本番RLS
+
+- `auth.users.id` と `members.auth_user_id` を1対1で紐付けます。
+- ログイン会員のLOMは `members.lom_id` から判定します。
+- 一般会員は同一LOMの会員を閲覧でき、自分のプロフィールだけ更新できます。
+- 出欠回答は本人だけ更新できます。
+- 現在年度の `admin`、`president`、`secretary` はLOM内の管理対象を更新できます。
+- 通知は本人宛て、または管理役職だけが閲覧できます。
+- ブラウザには公開キーだけを置き、`service_role` キーは使用しません。
+
+`supabase/auth-schema-migration.sql` はAuth導入時に実行します。
+`supabase/production-rls.sql` は全利用者のAuth紐付けと本番検証が完了してから実行します。
+開発用の `dev_*` policy は本番公開前に必ず削除します。

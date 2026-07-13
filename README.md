@@ -149,3 +149,18 @@ git push
 - AI議事録
 - 会費決済
 - QR受付
+## Supabase Auth設定
+
+1. SupabaseのAuthenticationからメール・パスワードのユーザーを作成します。
+2. `supabase/auth-schema-migration.sql` をSQL Editorで実行します。
+3. 作成したAuthユーザーのUUIDを対象会員の `members.auth_user_id` に設定します。
+4. `.env.local` に公開URLと公開キーを設定して開発サーバーを再起動します。
+
+```sql
+update public.members
+set auth_user_id = '<Authentication Users画面のUser UID>'
+where email = '<作成したログインメールアドレス>';
+```
+
+未ログイン時は `/login` へ移動します。本番RLSへの切替は、全会員の紐付けと
+動作確認後に `supabase/production-rls.sql` を実行してください。

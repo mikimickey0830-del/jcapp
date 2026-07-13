@@ -1,9 +1,8 @@
 import { notificationService } from "@/services/notificationService";
 
-export function useNotifications() {
+export function useNotifications(memberId?: string) {
   return {
-    notifications: notificationService.getNotifications(),
-    unreadNotifications: notificationService.getUnreadNotifications(),
+    query: notificationService.getNotifications(memberId),
     notificationTypeLabels: notificationService.notificationTypeLabels,
     notificationStatusLabels: notificationService.notificationStatusLabels
   };
@@ -11,7 +10,8 @@ export function useNotifications() {
 
 export function useLatestNotifications(limit = 3) {
   return {
-    latestNotifications: notificationService.getLatestNotifications(limit),
+    query: notificationService.getNotifications(),
+    limit,
     notificationTypeLabels: notificationService.notificationTypeLabels,
     notificationStatusLabels: notificationService.notificationStatusLabels
   };

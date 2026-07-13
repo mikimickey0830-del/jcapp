@@ -6,11 +6,15 @@ import { AttendanceResponseForm } from "@/components/AttendanceResponseForm";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusPill } from "@/components/StatusPill";
 import { attendanceService } from "@/services/attendanceService";
+import { authService } from "@/services/authService";
 import { scheduleService } from "@/services/scheduleService";
 
 export default async function AttendanceRespondPage({ params }: { params: { eventId: string } }) {
   noStore();
-  const result = await attendanceService.getAttendanceDetail(params.eventId);
+  const [result, authContext] = await Promise.all([
+    attendanceService.getAttendanceDetail(params.eventId),
+    authService.getCurrentAuthContext(),
+  ]);
   const detail = result.data;
 
   if (!detail) {
@@ -41,7 +45,18 @@ export default async function AttendanceRespondPage({ params }: { params: { even
         <p className="mt-3 text-sm text-slate-600">返信期限: {event.attendanceDeadline ?? "未設定"}</p>
       </section>
 
-      <AttendanceResponseForm eventId={event.id} rows={rows} />
+      {authContext.member ? (
+        <AttendanceResponseForm
+          canManage={authContext.canManage}
+          currentMemberId={authContext.member.id}
+          eventId={event.id}
+          rows={authContext.canManage ? rows : rows.filter((row) => row.memberId === authContext.member?.id)}
+        />
+      ) : (
+        <p className="mt-5 rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
+          会員情報との紐付けがないため回答できません。管理者へご連絡ください。
+        </p>
+      )}
 
       <Link className="mt-5 flex min-h-12 items-center justify-center rounded-md border border-jc-line bg-white px-4 text-sm font-bold text-slate-700" href="/attendance">
         出欠一覧へ

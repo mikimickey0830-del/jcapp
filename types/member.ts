@@ -18,6 +18,8 @@ export type AnnualMemberProfile = {
 
 export type Member = {
   id: string;
+  authUserId?: string;
+  lomId?: string;
   lastName: string;
   firstName: string;
   lastNameKana: string;

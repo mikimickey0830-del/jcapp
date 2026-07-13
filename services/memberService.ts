@@ -35,6 +35,8 @@ type SupabaseCommitteeMembershipRow = {
 
 type SupabaseMemberRow = {
   id: string;
+  auth_user_id: string | null;
+  lom_id: string;
   last_name: string;
   first_name: string;
   last_name_kana: string;
@@ -50,6 +52,8 @@ type SupabaseMemberRow = {
 
 const memberSelect = `
   id,
+  auth_user_id,
+  lom_id,
   last_name,
   first_name,
   last_name_kana,
@@ -136,6 +140,8 @@ function toMember(row: SupabaseMemberRow): Member {
 
   return {
     id: row.id,
+    authUserId: row.auth_user_id ?? undefined,
+    lomId: row.lom_id,
     lastName: row.last_name,
     firstName: row.first_name,
     lastNameKana: row.last_name_kana,

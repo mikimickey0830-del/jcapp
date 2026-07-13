@@ -7,13 +7,18 @@ import type { FiscalYear } from "@/types/year";
 
 export type DashboardData = {
   currentFiscalYear?: FiscalYear;
-  currentMemberId: string;
+  currentMemberId?: string;
   currentAssignment?: AnnualMemberAssignmentView;
   todayEvents: ScheduleEvent[];
   thisWeekEvents: ScheduleEvent[];
   attendance: AttendanceDashboard;
   announcements: Announcement[];
   documents: SharedDocument[];
+};
+
+export type DashboardViewer = {
+  memberId: string;
+  lomId: string;
 };
 
 export type DashboardResult = {

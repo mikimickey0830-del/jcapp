@@ -8,6 +8,7 @@ import {
   getUnansweredAttendanceForMember as getFallbackUnansweredAttendanceForMember
 } from "@/lib/attendance";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { scheduleService } from "@/services/scheduleService";
 import type {
   AttendanceDashboard,
@@ -325,8 +326,13 @@ async function fetchDashboard(memberId?: string): Promise<AttendanceQueryResult<
   };
 }
 
-async function saveAttendanceResponse(eventId: string, payload: AttendanceMutationPayload) {
-  if (!isSupabaseConfigured || !supabase) {
+async function saveAttendanceResponse(
+  eventId: string,
+  payload: AttendanceMutationPayload,
+  authenticatedClient?: SupabaseClient | null,
+) {
+  const database = authenticatedClient ?? supabase;
+  if (!isSupabaseConfigured || !database) {
     return { error: "Supabase環境変数が未設定です。" };
   }
 
@@ -337,20 +343,24 @@ async function saveAttendanceResponse(eventId: string, payload: AttendanceMutati
   }
 
   const normalizedId = normalizeEventId(eventId);
-  const eventResult = await scheduleService.getEventById(normalizedId);
-  const event = eventResult.data;
-  if (!event) return { error: "イベントが見つかりません。" };
+  const { data: event, error: eventError } = await database
+    .from("events")
+    .select("id, lom_id, attendance_deadline")
+    .eq("id", normalizedId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (eventError || !event) return { error: eventError?.message ?? "イベントが見つかりません。" };
 
   const now = new Date().toISOString();
-  const { error } = await supabase.from("attendance_responses").upsert(
+  const { error } = await database.from("attendance_responses").upsert(
     {
-      lom_id: event.lomId,
+      lom_id: event.lom_id,
       event_id: event.id,
       member_id: payload.memberId,
       status,
       comment: payload.comment?.trim() ?? "",
       responded_at: now,
-      reply_deadline: event.attendanceDeadline ? `${event.attendanceDeadline}T23:59:00+09:00` : null,
+      reply_deadline: event.attendance_deadline,
       is_overdue: false,
       updated_at: now
     },

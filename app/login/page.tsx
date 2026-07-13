@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { Suspense } from "react";
+import { LoginForm } from "@/components/LoginForm";
 
 export default function LoginPage() {
   return (
@@ -12,46 +13,20 @@ export default function LoginPage() {
             JC-App
           </h1>
           <p className="mt-4 text-sm leading-6 text-slate-600">
-            年度ごとの役職、委員会、予定、資料をまとめて確認できます。
+            登録されたメールアドレスとパスワードでログインしてください。
           </p>
         </div>
-
-        <form className="space-y-4">
-          <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-slate-700">メールアドレス</span>
-            <input
-              autoComplete="email"
-              className="min-h-12 w-full rounded-md border border-jc-line bg-slate-50 px-4 text-base outline-none transition focus:border-jc-blue focus:bg-white focus:ring-4 focus:ring-blue-100"
-              placeholder="name@example.com"
-              type="email"
-            />
-          </label>
-
-          <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-slate-700">パスワード</span>
-            <input
-              autoComplete="current-password"
-              className="min-h-12 w-full rounded-md border border-jc-line bg-slate-50 px-4 text-base outline-none transition focus:border-jc-blue focus:bg-white focus:ring-4 focus:ring-blue-100"
-              placeholder="パスワード"
-              type="password"
-            />
-          </label>
-
-          {/* Auth wiring will be connected to Supabase in the next phase. */}
-          <Link
-            className="flex min-h-12 w-full items-center justify-center rounded-md bg-jc-blue px-4 text-base font-bold text-white shadow-soft transition hover:bg-blue-700"
-            href="/"
-          >
-            ログイン
-          </Link>
-        </form>
+        <Suspense fallback={<LoginFormLoading />}>
+          <LoginForm />
+        </Suspense>
       </section>
-
       <p className="pb-3 text-center text-xs leading-5 text-slate-500">
-        Supabase Auth 接続前の画面雛形です。
-        <br />
-        接続キーは環境変数で管理します。
+        アカウントがない場合は、JC-App管理者へご連絡ください。
       </p>
     </main>
   );
+}
+
+function LoginFormLoading() {
+  return <div className="h-52 animate-pulse rounded-md bg-slate-100" />;
 }

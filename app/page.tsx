@@ -3,6 +3,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import { AppShell } from "@/components/AppShell";
 import { StatusPill } from "@/components/StatusPill";
 import { announcementService } from "@/services/announcementService";
+import { authService } from "@/services/authService";
 import { dashboardService } from "@/services/dashboardService";
 import { documentService } from "@/services/documentService";
 import { scheduleService } from "@/services/scheduleService";
@@ -35,7 +36,12 @@ const annualRoleLabels: Record<string, string> = {
 
 export default async function HomePage() {
   noStore();
-  const result = await dashboardService.getDashboard();
+  const authContext = await authService.getCurrentAuthContext();
+  const result = await dashboardService.getDashboard(
+    authContext.member
+      ? { memberId: authContext.member.id, lomId: authContext.member.lomId }
+      : undefined,
+  );
   const {
     currentFiscalYear,
     currentAssignment,
@@ -58,12 +64,27 @@ export default async function HomePage() {
           </div>
           <div className="shrink-0 text-right">
             <StatusPill label={currentFiscalYear?.name ?? "年度未設定"} />
+            {authContext.member ? (
+              <p className="mt-2 max-w-32 truncate text-xs font-semibold text-slate-600">
+                {authContext.member.name}
+              </p>
+            ) : null}
             {result.usesFallback ? (
               <p className="mt-2 text-xs font-semibold text-amber-700">一部仮データ</p>
             ) : null}
           </div>
         </div>
       </header>
+
+      {!authContext.member ? (
+        <section className="mt-4 rounded-md border border-rose-200 bg-rose-50 p-4 text-sm leading-6 text-rose-900">
+          <p className="font-bold">ログイン会員との紐付けが見つかりません。</p>
+          <p className="mt-1">
+            管理者に、AuthユーザーIDと会員情報の紐付けを依頼してください。
+          </p>
+          {authContext.userEmail ? <p className="mt-2 text-xs">ログイン: {authContext.userEmail}</p> : null}
+        </section>
+      ) : null}
 
       {result.errors.length > 0 ? (
         <section className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">

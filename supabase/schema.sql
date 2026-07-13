@@ -29,7 +29,7 @@ create table if not exists public.fiscal_years (
 create table if not exists public.members (
   id uuid primary key default gen_random_uuid(),
   lom_id uuid not null references public.loms(id) on delete cascade,
-  auth_user_id uuid unique,
+  auth_user_id uuid unique references auth.users(id) on delete set null,
   last_name text not null,
   first_name text not null,
   last_name_kana text not null,
@@ -42,6 +42,18 @@ create table if not exists public.members (
   updated_at timestamptz not null default now(),
   unique (lom_id, email)
 );
+
+alter table public.members add column if not exists auth_user_id uuid;
+create unique index if not exists idx_members_auth_user_id
+  on public.members(auth_user_id) where auth_user_id is not null;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'members_auth_user_id_fkey') then
+    alter table public.members add constraint members_auth_user_id_fkey
+      foreign key (auth_user_id) references auth.users(id) on delete set null;
+  end if;
+end $$;
 
 create table if not exists public.committees (
   id uuid primary key default gen_random_uuid(),
