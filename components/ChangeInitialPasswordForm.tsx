@@ -2,10 +2,8 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { LogoutButton } from "@/components/LogoutButton";
-
-const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{12,}$/;
+import { isValidMemberPassword, passwordRequirementMessage } from "@/lib/auth/passwordPolicy";
 
 export function ChangeInitialPasswordForm() {
   const router = useRouter();
@@ -23,8 +21,8 @@ export function ChangeInitialPasswordForm() {
       setError("現在の初期パスワードを入力してください。");
       return;
     }
-    if (!passwordPattern.test(newPassword)) {
-      setError("新しいパスワードは英大文字・英小文字・数字・記号を含む12文字以上にしてください。");
+    if (!isValidMemberPassword(newPassword)) {
+      setError(passwordRequirementMessage);
       return;
     }
     if (newPassword !== confirmation) {
@@ -32,25 +30,13 @@ export function ChangeInitialPasswordForm() {
       return;
     }
 
-    const supabase = createClient();
-    if (!supabase) {
-      setError("Supabaseの設定を確認できませんでした。");
-      return;
-    }
-
     setIsSaving(true);
-    const { error: updateError } = await supabase.auth.updateUser({
-      current_password: currentPassword,
-      password: newPassword,
-    });
-    if (updateError) {
-      setError("パスワードを変更できませんでした。現在の初期パスワードと新しいパスワードの条件を確認してください。");
-      setIsSaving(false);
-      return;
-    }
-
     try {
-      const response = await fetch("/api/auth/change-initial-password", { method: "POST" });
+      const response = await fetch("/api/auth/change-initial-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
       const result = (await response.json()) as { error?: string };
       if (!response.ok || result.error) {
         setError(result.error ?? "パスワード変更を完了できませんでした。もう一度お試しください。");
@@ -81,7 +67,7 @@ export function ChangeInitialPasswordForm() {
           <PasswordField autoComplete="new-password" label="新しいパスワード" onChange={setNewPassword} value={newPassword} />
           <PasswordField autoComplete="new-password" label="新しいパスワード（確認）" onChange={setConfirmation} value={confirmation} />
           <p className="rounded-md bg-jc-sky p-3 text-xs leading-5 text-slate-700">
-            英大文字・英小文字・数字・記号を含む12文字以上で設定してください。
+            {passwordRequirementMessage}
           </p>
           <button
             className="min-h-12 w-full rounded-md bg-jc-blue px-4 text-base font-bold text-white disabled:bg-slate-400"

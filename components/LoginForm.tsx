@@ -11,10 +11,17 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [isTemporarilyLocked, setIsTemporarilyLocked] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+
+    if (isTemporarilyLocked) {
+      setError("ログイン試行が多いため、30秒ほど待ってからもう一度お試しください。");
+      return;
+    }
 
     if (!email.trim() || !password) {
       setError("メールアドレスとパスワードを入力してください。");
@@ -35,6 +42,15 @@ export function LoginForm() {
 
     if (signInError) {
       setError("メールアドレスまたはパスワードを確認してください。");
+      const nextFailedAttempts = failedAttempts + 1;
+      setFailedAttempts(nextFailedAttempts);
+      if (nextFailedAttempts >= 5) {
+        setIsTemporarilyLocked(true);
+        window.setTimeout(() => {
+          setFailedAttempts(0);
+          setIsTemporarilyLocked(false);
+        }, 30_000);
+      }
       setIsSubmitting(false);
       return;
     }
@@ -82,7 +98,7 @@ export function LoginForm() {
       </label>
       <button
         className="flex min-h-12 w-full items-center justify-center rounded-md bg-jc-blue px-4 text-base font-bold text-white shadow-soft transition hover:bg-blue-700 disabled:bg-slate-400"
-        disabled={isSubmitting}
+        disabled={isSubmitting || isTemporarilyLocked}
         type="submit"
       >
         {isSubmitting ? "ログイン中..." : "ログイン"}

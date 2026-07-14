@@ -51,7 +51,7 @@ export function MemberCredentialActions({
   return (
     <section className="mb-5 rounded-md border border-jc-line bg-white p-4 shadow-sm">
       <h2 className="text-base font-bold text-jc-navy">初期ログイン情報</h2>
-      <p className="mt-1 text-xs leading-5 text-slate-500">初期パスワードは発行直後に一度だけ表示され、データベースには保存されません。</p>
+      <p className="mt-1 text-xs leading-5 text-slate-500">全会員共通の初期パスワードを発行します。初回ログイン後に必ず変更してください。</p>
 
       {credentials ? <CredentialsPanel credentials={credentials} onClose={() => setCredentials(null)} /> : null}
 
@@ -86,10 +86,10 @@ function CredentialsPanel({ credentials, onClose }: { credentials: Credentials; 
   return (
     <div className="mt-4 space-y-3 rounded-md border border-blue-200 bg-jc-sky p-3 print:border-0">
       <p className="text-sm font-bold text-jc-navy">{credentials.memberName} さんの初期ログイン情報</p>
-      <p className="text-xs leading-5 text-amber-800">この画面を閉じると、初期パスワードは再表示できません。</p>
+      <p className="text-xs leading-5 text-amber-800">全会員共通の初期パスワードです。速やかに変更してください。この画面を閉じると再表示できません。</p>
       <CopyRow label="ログインID" value={credentials.loginId} />
       <CopyRow label="初期パスワード" value={credentials.initialPassword} />
-      <p className="text-xs leading-5 text-slate-700">本人が初回ログインすると、パスワード変更が必須になります。</p>
+      <p className="text-xs leading-5 text-slate-700">本人は初回ログイン後に必ずパスワードを変更します。</p>
       <div className="grid grid-cols-2 gap-2 print:hidden">
         <button className="min-h-11 rounded-md border border-jc-line bg-white text-sm font-bold text-slate-700" onClick={() => window.print()} type="button">印刷</button>
         <button className="min-h-11 rounded-md bg-jc-blue text-sm font-bold text-white" onClick={onClose} type="button">閉じる</button>

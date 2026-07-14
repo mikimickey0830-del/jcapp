@@ -144,7 +144,7 @@ export function MemberForm({ mode, member }: MemberFormProps) {
             />
             <span className="text-sm font-bold text-jc-navy">アカウントを同時発行する</span>
           </label>
-          <p className="mt-2 text-xs leading-5 text-slate-700">初期パスワードを自動発行し、登録完了後に一度だけ表示します。</p>
+          <p className="mt-2 text-xs leading-5 text-slate-700">全会員共通の初期パスワードを設定し、登録完了後に一度だけ表示します。</p>
         </section>
       ) : null}
 
@@ -165,10 +165,10 @@ function InitialCredentialsNotice({ credentials, onClose }: { credentials: Initi
         <p className="text-sm font-bold text-jc-blue">アカウント発行完了</p>
         <h2 className="mt-2 text-xl font-bold text-jc-navy">{credentials.memberName}</h2>
       </div>
-      <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-800">この画面を閉じると、初期パスワードは再表示できません。本人へ安全な方法でお渡しください。</p>
+      <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-800">全会員共通の初期パスワードです。速やかに変更してください。この画面を閉じると、初期パスワードは再表示できません。</p>
       <CredentialRow label="ログインID" value={credentials.loginId} />
       <CredentialRow label="初期パスワード" value={credentials.initialPassword} />
-      <p className="text-sm leading-6 text-slate-700">初回ログイン後は、必ず新しいパスワードへの変更画面が表示されます。</p>
+      <p className="text-sm leading-6 text-slate-700">初回ログイン後に必ず変更してください。</p>
       <div className="grid grid-cols-2 gap-3 print:hidden">
         <button className="min-h-12 rounded-md border border-jc-line bg-white px-4 text-sm font-bold text-slate-700" onClick={() => window.print()} type="button">印刷</button>
         <button className="min-h-12 rounded-md bg-jc-blue px-4 text-sm font-bold text-white" onClick={onClose} type="button">閉じる</button>

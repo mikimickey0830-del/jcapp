@@ -1,5 +1,4 @@
 import "server-only";
-import { randomInt } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { MemberStatus } from "@/types/member";
@@ -35,36 +34,13 @@ type MemberAccountRow = {
   first_name: string;
 };
 
-const uppercase = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-const lowercase = "abcdefghijkmnopqrstuvwxyz";
-const digits = "23456789";
-const symbols = "!@#$%*+-_";
-const allPasswordCharacters = `${uppercase}${lowercase}${digits}${symbols}`;
+// The common initial password is never persisted in Postgres, audit logs,
+// URLs, cookies, or browser storage. must_change_password blocks all normal
+// application access until the member replaces it.
+const initialPassword = "tamashima0107";
 
 function normalizedEmail(email: string) {
   return email.trim().toLowerCase();
-}
-
-function randomCharacter(characters: string) {
-  return characters[randomInt(characters.length)];
-}
-
-/** Generates a one-time credential without persisting or logging its plaintext. */
-export function generateInitialPassword() {
-  const characters = [
-    randomCharacter(uppercase),
-    randomCharacter(lowercase),
-    randomCharacter(digits),
-    randomCharacter(symbols),
-    ...Array.from({ length: 12 }, () => randomCharacter(allPasswordCharacters)),
-  ];
-
-  for (let index = characters.length - 1; index > 0; index -= 1) {
-    const swapIndex = randomInt(index + 1);
-    [characters[index], characters[swapIndex]] = [characters[swapIndex], characters[index]];
-  }
-
-  return characters.join("");
 }
 
 async function findAuthUserByEmail(email: string) {
@@ -156,8 +132,7 @@ async function createMemberWithInitialAccount(
     return { ok: false, status: 409, message: "このメールアドレスは、すでに認証アカウントとして使用されています。" };
   }
 
-  const password = generateInitialPassword();
-  const authAccount = await createAuthAccount(input.email, password, lomId, actorAuthUserId);
+  const authAccount = await createAuthAccount(input.email, initialPassword, lomId, actorAuthUserId);
   if (!authAccount.user || authAccount.error) {
     return { ok: false, status: 409, message: "認証アカウントを作成できませんでした。メールアドレスの重複を確認してください。" };
   }
@@ -207,7 +182,7 @@ async function createMemberWithInitialAccount(
       memberId: member.id,
       memberName: `${member.last_name} ${member.first_name}`,
       loginId: member.email,
-      initialPassword: password,
+      initialPassword,
     },
   };
 }
@@ -255,8 +230,7 @@ async function issueInitialPassword(
     return { ok: false, status: 409, message: "このメールアドレスはすでに認証アカウントとして使用されています。メールアドレスを確認してください。" };
   }
 
-  const password = generateInitialPassword();
-  const authAccount = await createAuthAccount(member.email, password, member.lom_id, actorAuthUserId, member.id);
+  const authAccount = await createAuthAccount(member.email, initialPassword, member.lom_id, actorAuthUserId, member.id);
   if (!authAccount.user || authAccount.error) {
     return { ok: false, status: 409, message: "認証アカウントを作成できませんでした。メールアドレスを確認してください。" };
   }
@@ -284,7 +258,7 @@ async function issueInitialPassword(
       memberId: member.id,
       memberName: `${member.last_name} ${member.first_name}`,
       loginId: member.email,
-      initialPassword: password,
+      initialPassword,
     },
   };
 }
@@ -301,8 +275,7 @@ async function reissueInitialPassword(
   const admin = createAdminClient();
   if (!admin) return { ok: false, status: 500, message: "認証アカウントの設定を確認できませんでした。" };
 
-  const password = generateInitialPassword();
-  const { error } = await admin.auth.admin.updateUserById(member.auth_user_id, { password });
+  const { error } = await admin.auth.admin.updateUserById(member.auth_user_id, { password: initialPassword });
   if (error) {
     return { ok: false, status: 500, message: "初期パスワードを再発行できませんでした。" };
   }
@@ -324,7 +297,7 @@ async function reissueInitialPassword(
       memberId: member.id,
       memberName: `${member.last_name} ${member.first_name}`,
       loginId: member.email,
-      initialPassword: password,
+      initialPassword,
     },
   };
 }

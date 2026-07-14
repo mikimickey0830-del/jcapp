@@ -3,29 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
+import { isValidMemberPassword, passwordRequirementMessage } from "@/lib/auth/passwordPolicy";
 import { createClient } from "@/lib/supabase/client";
 
 type PageState = "checking" | "ready" | "invalid";
-
-function isSamePasswordError(error: { code?: string; message?: string }) {
-  const message = error.message?.toLowerCase() ?? "";
-  return error.code === "same_password" || message.includes("different from the old password") || message.includes("same password");
-}
-
-function passwordUpdateErrorMessage(error: { code?: string; message?: string }) {
-  const code = error.code ?? "unknown";
-  const message = error.message?.toLowerCase() ?? "";
-
-  if (code === "weak_password" || message.includes("weak password") || message.includes("password is too weak")) {
-    return "そのパスワードは安全性の条件を満たしていません。英字・数字を組み合わせた、推測されにくい8文字以上のパスワードにしてください。";
-  }
-  if (code === "session_not_found" || message.includes("auth session missing") || message.includes("invalid jwt")) {
-    return "パスワード設定用のログイン状態が切れています。管理者に招待メールの再送を依頼し、最新のメールから開いてください。";
-  }
-
-  // エラーコードだけを表示し、認証情報や招待リンクは画面へ出さない。
-  return `パスワードを設定できませんでした（確認コード: ${code}）。この画面の写真を管理者へ送ってください。`;
-}
 
 export default function AcceptInvitePage() {
   const router = useRouter();
@@ -55,8 +36,8 @@ export default function AcceptInvitePage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    if (password.length < 8) {
-      setError("パスワードは8文字以上で入力してください。");
+    if (!isValidMemberPassword(password)) {
+      setError(passwordRequirementMessage);
       return;
     }
     if (password !== confirmation) {
@@ -82,15 +63,12 @@ export default function AcceptInvitePage() {
       return;
     }
 
-    const { error: updateError } = await supabase.auth.updateUser({ password });
-    if (updateError && !isSamePasswordError(updateError)) {
-      setError(passwordUpdateErrorMessage(updateError));
-      setIsSaving(false);
-      return;
-    }
-
     try {
-      const response = await fetch("/api/auth/accept-invite", { method: "POST" });
+      const response = await fetch("/api/auth/accept-invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
       const result = (await response.json()) as { error?: string };
       if (!response.ok || result.error) {
         setError(result.error ?? "会員情報を紐付けできませんでした。管理者へ連絡してください。");
@@ -128,6 +106,7 @@ export default function AcceptInvitePage() {
             {error ? <p className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800" role="alert">{error}</p> : null}
             <PasswordField label="新しいパスワード" onChange={setPassword} value={password} />
             <PasswordField label="パスワード（確認）" onChange={setConfirmation} value={confirmation} />
+            <p className="rounded-md bg-jc-sky p-3 text-xs leading-5 text-slate-700">{passwordRequirementMessage}</p>
             <button className="min-h-12 w-full rounded-md bg-jc-blue px-4 text-base font-bold text-white disabled:bg-slate-400" disabled={isSaving} type="submit">
               {isSaving ? "設定中..." : "パスワードを設定して利用開始"}
             </button>
