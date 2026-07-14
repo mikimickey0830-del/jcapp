@@ -22,6 +22,10 @@ type ActivateResult =
   | { ok: true; memberId: string; alreadyActive: boolean }
   | { ok: false; status: number; message: string };
 
+type PasswordSetupEmailResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
 function normalizedEmail(email: string) {
   return email.trim().toLowerCase();
 }
@@ -72,6 +76,16 @@ async function recordInvitation(memberId: string, action: InvitationAction) {
   return !error && data === true;
 }
 
+async function sendPasswordSetupEmail(email: string, redirectTo: string): Promise<PasswordSetupEmailResult> {
+  const supabase = createClient();
+  if (!supabase) return { ok: false, message: "Supabaseの設定が見つかりません。" };
+
+  const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail(email), { redirectTo });
+  if (error) return { ok: false, message: invitationErrorMessage(error) };
+
+  return { ok: true };
+}
+
 async function inviteMember(memberId: string, actor: AuthMember, resend: boolean): Promise<InviteResult> {
   const admin = createAdminClient();
   const redirectBaseUrl = siteUrl();
@@ -105,6 +119,21 @@ async function inviteMember(memberId: string, actor: AuthMember, resend: boolean
 
   const action: InvitationAction = resend ? "resent" : "invited";
   const redirectTo = `${redirectBaseUrl}/auth/callback?next=/auth/accept-invite`;
+
+  // Supabase creates the Auth user when the first invite is sent. A later
+  // resend must use password recovery instead of creating the user again.
+  if (resend && member.invitation_status === "invited") {
+    const recoveryResult = await sendPasswordSetupEmail(member.email, redirectTo);
+    if (!recoveryResult.ok) {
+      await recordInvitation(member.id, "failed");
+      return { ok: false, status: 502, message: recoveryResult.message };
+    }
+    if (!(await recordInvitation(member.id, action))) {
+      return { ok: false, status: 500, message: "再送メールは送信されましたが、招待状態を記録できませんでした。" };
+    }
+    return { ok: true, status: "invited", message: "パスワード設定メールを再送しました。" };
+  }
+
   const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(normalizedEmail(member.email), {
     data: {
       member_id: member.id,
@@ -115,6 +144,16 @@ async function inviteMember(memberId: string, actor: AuthMember, resend: boolean
   });
 
   if (inviteError) {
+    if (resend) {
+      const recoveryResult = await sendPasswordSetupEmail(member.email, redirectTo);
+      if (recoveryResult.ok && (await recordInvitation(member.id, action))) {
+        return { ok: true, status: "invited", message: "パスワード設定メールを再送しました。" };
+      }
+      if (!recoveryResult.ok) {
+        await recordInvitation(member.id, "failed");
+        return { ok: false, status: 502, message: recoveryResult.message };
+      }
+    }
     await recordInvitation(member.id, "failed");
     return {
       ok: false,
