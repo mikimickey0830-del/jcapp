@@ -26,6 +26,12 @@ type PasswordSetupEmailResult =
   | { ok: true }
   | { ok: false; message: string };
 
+type PendingAuthUser = {
+  id: string;
+  email?: string;
+  user_metadata?: { member_id?: string };
+};
+
 function normalizedEmail(email: string) {
   return email.trim().toLowerCase();
 }
@@ -55,6 +61,52 @@ function isExistingAuthUserError(error: unknown) {
   if (!error || typeof error !== "object") return false;
   const code = "code" in error ? String((error as { code?: unknown }).code) : "";
   return code === "email_exists";
+}
+
+async function findPendingAuthUser(memberId: string): Promise<PendingAuthUser | null> {
+  const admin = createAdminClient();
+  if (!admin) return null;
+
+  // 招待時に保存した member_id を使い、メール変更後も対象ユーザーを特定する。
+  for (let page = 1; page <= 10; page += 1) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) return null;
+
+    const user = data.users.find((candidate) => candidate.user_metadata?.member_id === memberId);
+    if (user) return user as PendingAuthUser;
+    if (data.users.length < 1000) break;
+  }
+
+  return null;
+}
+
+async function synchronizePendingInviteEmail(member: InvitationMemberRow): Promise<InviteResult | null> {
+  const authUser = await findPendingAuthUser(member.id);
+  if (!authUser || normalizedEmail(authUser.email ?? "") === normalizedEmail(member.email)) {
+    return null;
+  }
+
+  const admin = createAdminClient();
+  if (!admin) {
+    return { ok: false, status: 500, message: "招待用アカウントの設定を確認できませんでした。" };
+  }
+
+  // 会員編集後でも、招待済みかつ未利用開始のAuthメールを会員情報へ揃える。
+  // パスワード設定メールを新しい宛先で受け取ることで、利用者本人も確認できる。
+  const { error } = await admin.auth.admin.updateUserById(authUser.id, {
+    email: normalizedEmail(member.email),
+    email_confirm: true,
+  });
+
+  if (error) {
+    return {
+      ok: false,
+      status: 409,
+      message: "このメールアドレスへ招待用アカウントを変更できませんでした。別の会員やAuthアカウントで使用されていないか確認してください。",
+    };
+  }
+
+  return null;
 }
 
 async function getInvitationMember(memberId: string) {
@@ -122,6 +174,9 @@ async function inviteMember(memberId: string, actor: AuthMember, resend: boolean
   if (member.invitation_status === "invited" && !resend) {
     return { ok: false, status: 409, message: "すでに招待送信済みです。必要な場合は招待を再送してください。" };
   }
+
+  const emailSyncError = await synchronizePendingInviteEmail(member);
+  if (emailSyncError) return emailSyncError;
 
   const action: InvitationAction = resend ? "resent" : "invited";
   const redirectTo = `${redirectBaseUrl}/auth/callback?next=/auth/accept-invite`;
