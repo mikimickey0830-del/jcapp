@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireManagement } from "@/lib/auth/requireManagement";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase/service";
+import { accountProvisioningService } from "@/services/accountProvisioningService";
 import type { MemberStatus } from "@/types/member";
 
 type MemberRequestBody = {
@@ -12,106 +13,57 @@ type MemberRequestBody = {
   phone?: string;
   joinedYear?: number;
   status?: MemberStatus;
+  issueAccount?: boolean;
 };
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const validStatuses: MemberStatus[] = ["active", "inactive", "graduated"];
 
-function databaseErrorResponse(error: { code?: string; message: string }) {
-  // 同一LOM内でのメールアドレス重複は、画面で対応方法が分かる形にする。
-  if (error.code === "23505" || error.message.includes("members_lom_id_email_key")) {
-    return NextResponse.json(
-      { error: "このメールアドレスは、すでに別の会員に登録されています。別のメールアドレスを入力してください。" },
-      { status: 409 }
-    );
-  }
-
-  return NextResponse.json({ error: "会員情報を保存できませんでした。時間をおいて再度お試しください。" }, { status: 500 });
-}
-
 function validateMemberInput(body: MemberRequestBody) {
-  if (!body.lastName?.trim() || !body.firstName?.trim()) {
-    return "氏名は必須です。";
-  }
-
-  if (!body.email || !emailPattern.test(body.email.trim())) {
-    return "メールアドレスの形式を確認してください。";
-  }
-
-  if (!Number.isInteger(body.joinedYear)) {
-    return "入会年度は数値で入力してください。";
-  }
-
-  if (body.status && !validStatuses.includes(body.status)) {
-    return "ステータスの値が不正です。";
-  }
-
+  if (!body.lastName?.trim() || !body.firstName?.trim()) return "氏名は必須です。";
+  if (!body.email || !emailPattern.test(body.email.trim())) return "メールアドレスの形式を確認してください。";
+  if (!Number.isInteger(body.joinedYear)) return "入会年度は数値で入力してください。";
+  if (body.status && !validStatuses.includes(body.status)) return "ステータスの値が正しくありません。";
   return null;
-}
-
-async function getDefaultLomId() {
-  if (!supabase) {
-    return null;
-  }
-
-  const { data, error } = await supabase
-    .from("loms")
-    .select("id")
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data?.id as string | undefined;
 }
 
 export async function POST(request: Request) {
   const guard = await requireManagement();
   if (guard.response) return guard.response;
-  if (!isSupabaseConfigured || !supabase) {
-    return NextResponse.json({ error: "Supabase環境変数が未設定です。" }, { status: 500 });
+  if (!isSupabaseConfigured || !supabase || !guard.authContext.member || !guard.authContext.userId) {
+    return NextResponse.json({ error: "Supabaseの設定を確認できませんでした。" }, { status: 500 });
   }
 
   const body = (await request.json()) as MemberRequestBody;
   const validationError = validateMemberInput(body);
-
-  if (validationError) {
-    return NextResponse.json({ error: validationError }, { status: 400 });
-  }
+  if (validationError) return NextResponse.json({ error: validationError }, { status: 400 });
 
   try {
-    const lomId = await getDefaultLomId();
+    // Always create members in the authenticated manager's LOM. This keeps
+    // the endpoint safe when JC-App is later used by multiple LOMs.
+    const lomId = guard.authContext.member.lomId;
 
-    if (!lomId) {
-      return NextResponse.json({ error: "登録先LOMが見つかりません。" }, { status: 400 });
+    const input = {
+      lastName: body.lastName!.trim(),
+      firstName: body.firstName!.trim(),
+      lastNameKana: body.lastNameKana?.trim() ?? "",
+      firstNameKana: body.firstNameKana?.trim() ?? "",
+      email: body.email!.trim(),
+      phone: body.phone?.trim() ?? "",
+      joinedYear: body.joinedYear!,
+      status: body.status ?? "active",
+    };
+
+    if (body.issueAccount !== false) {
+      const result = await accountProvisioningService.createMemberWithInitialAccount(input, lomId, guard.authContext.userId);
+      if (!result.ok) return NextResponse.json({ error: result.message }, { status: result.status });
+      return NextResponse.json({ id: result.value.memberId, credentials: result.value });
     }
 
-    const { data, error } = await supabase
-      .from("members")
-      .insert({
-        lom_id: lomId,
-        last_name: body.lastName?.trim(),
-        first_name: body.firstName?.trim(),
-        last_name_kana: body.lastNameKana?.trim() ?? "",
-        first_name_kana: body.firstNameKana?.trim() ?? "",
-        email: body.email?.trim(),
-        phone: body.phone?.trim() ?? "",
-        joined_year: body.joinedYear,
-        status: body.status ?? "active"
-      })
-      .select("id")
-      .single();
-
-    if (error) {
-      return databaseErrorResponse(error);
-    }
-
-    return NextResponse.json({ id: data.id });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "保存に失敗しました。";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const result = await accountProvisioningService.createMemberWithoutAccount(input, lomId);
+    if (!result.ok) return NextResponse.json({ error: result.message }, { status: result.status });
+    return NextResponse.json({ id: result.value.memberId });
+  } catch {
+    return NextResponse.json({ error: "会員情報を保存できませんでした。" }, { status: 500 });
   }
 }

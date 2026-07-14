@@ -11,5 +11,8 @@ export async function requireManagement() {
   if (!authContext.member || !authContext.canManage) {
     return { authContext, response: NextResponse.json({ error: "管理操作を実行する権限がありません。" }, { status: 403 }) };
   }
+  if (authContext.mustChangePassword) {
+    return { authContext, response: NextResponse.json({ error: "初回パスワード変更を完了してください。" }, { status: 403 }) };
+  }
   return { authContext, response: null };
 }

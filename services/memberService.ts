@@ -40,6 +40,7 @@ type SupabaseMemberRow = {
   invited_at: string | null;
   activated_at: string | null;
   invitation_last_sent_at: string | null;
+  must_change_password: boolean | null;
   lom_id: string;
   last_name: string;
   first_name: string;
@@ -61,6 +62,7 @@ const memberSelect = `
   invited_at,
   activated_at,
   invitation_last_sent_at,
+  must_change_password,
   lom_id,
   last_name,
   first_name,
@@ -158,6 +160,7 @@ function toMember(row: SupabaseMemberRow): Member {
     invitedAt: row.invited_at ?? undefined,
     activatedAt: row.activated_at ?? undefined,
     invitationLastSentAt: row.invitation_last_sent_at ?? undefined,
+    mustChangePassword: Boolean(row.must_change_password),
     lastName: row.last_name,
     firstName: row.first_name,
     lastNameKana: row.last_name_kana,

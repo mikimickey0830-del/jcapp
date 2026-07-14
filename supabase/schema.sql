@@ -30,6 +30,7 @@ create table if not exists public.members (
   id uuid primary key default gen_random_uuid(),
   lom_id uuid not null references public.loms(id) on delete cascade,
   auth_user_id uuid unique references auth.users(id) on delete set null,
+  must_change_password boolean not null default false,
   invitation_status text not null default 'not_invited' check (invitation_status in ('not_invited', 'invited', 'active', 'failed')),
   invited_at timestamptz,
   activated_at timestamptz,

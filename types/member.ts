@@ -26,6 +26,7 @@ export type Member = {
   invitedAt?: string;
   activatedAt?: string;
   invitationLastSentAt?: string;
+  mustChangePassword?: boolean;
   lastName: string;
   firstName: string;
   lastNameKana: string;

@@ -15,5 +15,6 @@ export type AuthContext = {
   member?: AuthMember;
   isAuthenticated: boolean;
   canManage: boolean;
+  mustChangePassword?: boolean;
   error: string | null;
 };

@@ -228,6 +228,18 @@ LOMを管理します。
 - 招待メール送信で使うSecret keyは、ブラウザ、Client Component、ログ、GitHubへは渡しません。
 - 招待の自動紐付けは `user_metadata.member_id` を優先し、招待メールとの一致を確認します。該当しない場合のみメールアドレスで1件に特定できる会員へ紐付けます。
 
+## 初期パスワード発行
+
+`members.must_change_password` は、初回ログイン後にパスワード変更を必須にする認証状態です。初期アカウントの発行または再発行時に `true`、本人が変更を完了した時に `false` になります。平文の初期パスワードはこのテーブルを含むデータベースへ保存しません。
+
+認証状態の更新には、RLSを迂回して任意の会員を変更できないよう、次のSecurity Definer RPCを使います。
+
+- `complete_initial_password_change()`: ログイン本人の状態だけを完了にし、`initial_password_changed` を監査ログへ記録します。
+- `link_issued_member_account(...)`: 現在年度の有効な管理者だけが、同一LOMの会員へAuthユーザーを紐付け、初回変更を必須にできます。
+- `record_account_credential_event(...)`: 初期発行・再発行の監査イベントだけを記録します。パスワードは引数・ログ・metadataに含めません。
+
+監査ログの追加操作種別は `account_issued`、`initial_password_reissued`、`initial_password_changed` です。
+
 `supabase/auth-schema-migration.sql` はAuth導入時に実行します。
 `supabase/production-rls.sql` は全利用者のAuth紐付けと本番検証が完了してから実行します。
 開発用の `dev_*` policy は本番公開前に必ず削除します。

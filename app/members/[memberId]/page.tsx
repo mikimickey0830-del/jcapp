@@ -3,6 +3,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { MemberInvitationActions } from "@/components/MemberInvitationActions";
+import { MemberCredentialActions } from "@/components/MemberCredentialActions";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusPill } from "@/components/StatusPill";
 import { committeeRoleLabels } from "@/lib/assignments";
@@ -38,6 +39,12 @@ export default async function MemberDetailPage({ params }: { params: { memberId:
       />
 
       <DataSourceNotice error={error} source={source} />
+
+      <MemberCredentialActions
+        canManage={authContext.canManage && source === "supabase"}
+        hasAuthAccount={Boolean(member.authUserId)}
+        memberId={member.id}
+      />
 
       <MemberInvitationActions
         authUserId={member.authUserId}

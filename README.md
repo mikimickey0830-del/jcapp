@@ -151,9 +151,9 @@ git push
 - AI議事録
 - 会費決済
 - QR受付
-## Supabase Auth・会員招待設定
+## Supabase Auth・初期パスワード発行
 
-会員の利用開始は、管理者が会員画面の「招待メールを送る」を押す運用です。Auth User UIDのコピーや、`members.auth_user_id` の手動SQL更新は本番運用では不要です。
+標準の利用開始方法は、管理者が会員登録と同時にアカウントを発行し、表示された初期ログイン情報を本人へ安全に渡す方式です。Auth User UIDのコピーや、`members.auth_user_id` の手動SQL更新は本番運用では不要です。招待メールは、アカウントを後から利用開始させる場合の補助機能として残しています。
 
 ### 1. SQLを反映する
 
@@ -163,8 +163,10 @@ Supabase Dashboard の **SQL Editor** を開き、次の順に実行します。
 2. 初回のみ `supabase/seed.sql`
 3. Auth導入済みでない場合は `supabase/auth-schema-migration.sql`
 4. `supabase/auth-invitation-migration.sql`
+5. `supabase/initial-password-migration.sql`
+6. 本番RLSを利用する場合は、最新版の `supabase/production-rls.sql`
 
-既存環境では通常、手順4だけで招待状態と監査ログを追加できます。
+既存環境では、SQL Editorで手順5を実行してから、手順6を実行してください。どちらも既存会員や既存Auth連携を削除しません。
 
 ### 2. サーバー専用Secret keyを設定する
 
@@ -191,15 +193,25 @@ Supabase Dashboard の **Authentication** → **URL Configuration** を開き、
 
 Vercelでは同じ3つの環境変数を Project Settings → Environment Variables に設定し、`NEXT_PUBLIC_SITE_URL` を本番URLへ変更して再デプロイします。
 
-### 4. 招待メールを確認する
+### 4. 標準の会員登録フロー
+
+1. 管理者が `/members/new` を開きます。
+2. 氏名・メールアドレスなどを入力し、**アカウントを同時発行する** をオンのまま登録します。
+3. 発行完了画面に表示されるログインIDと初期パスワードを、本人へ安全な方法で渡します。この画面を閉じると初期パスワードは再表示できません。
+4. 本人は `/login` からログインします。最初のログインでは必ずパスワード変更画面が表示されます。
+5. 管理者は既存会員の詳細画面から、初期パスワードの発行または再発行もできます。再発行の操作履歴は監査ログに記録されます。
+
+初期パスワードは16文字のランダムな文字列で、データベース・ログ・GitHubには保存されません。
+
+### 5. 招待メールを確認する
 
 Supabase Dashboard の **Authentication** → **Email Templates** → **Invite user** で件名と本文を確認します。テンプレートには招待リンク用の `{{ .ConfirmationURL }}` を残してください。
 
-### 5. 運用フロー
+### 6. 招待メールを使う場合
 
-1. 管理者が会員を登録します。
+1. 管理者が、アカウントを同時発行せずに会員を登録します。
 2. `/members` または会員詳細の「招待メールを送る」を押します。
 3. 会員はメールのリンクを開き、`/auth/accept-invite` で8文字以上のパスワードを設定します。
 4. `members.auth_user_id` と招待状態がサーバー側で自動更新され、そのままダッシュボードへ移動します。
 
-未ログイン時は `/login` へ移動します。本番RLSへの切替は、全会員の紐付けと動作確認後に `supabase/production-rls.sql` を実行してください。
+未ログイン時は `/login` へ移動します。パスワードの再発行後は、対象会員に初回パスワード変更を求めます。Supabase Authの仕様上、すでに発行済みの短時間アクセストークンは有効期限まで残る場合があるため、本番では短いJWT有効期限の設定も検討してください。

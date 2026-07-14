@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireManagement } from "@/lib/auth/requireManagement";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase/service";
+import { accountProvisioningService } from "@/services/accountProvisioningService";
 import type { MemberStatus } from "@/types/member";
 
 type MemberRequestBody = {
@@ -63,6 +64,27 @@ export async function PATCH(request: Request, { params }: { params: { memberId: 
     return NextResponse.json({ error: validationError }, { status: 400 });
   }
 
+  const { data: existingMember, error: existingMemberError } = await supabase
+    .from("members")
+    .select("id, lom_id, email, auth_user_id")
+    .eq("id", params.memberId)
+    .maybeSingle();
+
+  if (existingMemberError) return databaseErrorResponse(existingMemberError);
+  if (!existingMember || existingMember.lom_id !== guard.authContext.member?.lomId) {
+    return NextResponse.json({ error: "対象会員が見つかりません。" }, { status: 404 });
+  }
+
+  const nextEmail = body.email!.trim().toLowerCase();
+  const emailSync = await accountProvisioningService.synchronizeManagedAccountEmail(
+    params.memberId,
+    existingMember.lom_id,
+    nextEmail,
+  );
+  if (!emailSync.ok) {
+    return NextResponse.json({ error: emailSync.message }, { status: emailSync.status });
+  }
+
   const { error } = await supabase
     .from("members")
     .update({
@@ -70,7 +92,7 @@ export async function PATCH(request: Request, { params }: { params: { memberId: 
       first_name: body.firstName?.trim(),
       last_name_kana: body.lastNameKana?.trim() ?? "",
       first_name_kana: body.firstNameKana?.trim() ?? "",
-      email: body.email?.trim(),
+      email: nextEmail,
       phone: body.phone?.trim() ?? "",
       joined_year: body.joinedYear,
       status: body.status ?? "active",
@@ -79,6 +101,13 @@ export async function PATCH(request: Request, { params }: { params: { memberId: 
     .eq("id", params.memberId);
 
   if (error) {
+    // When the database update fails after changing an Auth login ID, restore
+    // the previous Auth email so the member record and login ID stay aligned.
+    await accountProvisioningService.restoreManagedAccountEmail(
+      params.memberId,
+      existingMember.lom_id,
+      emailSync.value.previousEmail,
+    );
     return databaseErrorResponse(error);
   }
 

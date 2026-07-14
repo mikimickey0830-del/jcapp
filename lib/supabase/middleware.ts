@@ -25,16 +25,32 @@ export async function updateSession(request: NextRequest) {
 
   // getClaims validates the JWT before route access. Do not trust getSession here.
   const { data, error } = await supabase.auth.getClaims();
-  return protectRoute(request, response, Boolean(data?.claims && !error));
+  const isAuthenticated = Boolean(data?.claims && !error);
+  const userId = typeof data?.claims?.sub === "string" ? data.claims.sub : null;
+
+  let mustChangePassword = false;
+  if (isAuthenticated && userId) {
+    const { data: member } = await supabase
+      .from("members")
+      .select("must_change_password")
+      .eq("auth_user_id", userId)
+      .maybeSingle();
+    mustChangePassword = Boolean(member?.must_change_password);
+  }
+
+  return protectRoute(request, response, isAuthenticated, mustChangePassword);
 }
 
 function protectRoute(
   request: NextRequest,
   response: NextResponse,
   isAuthenticated: boolean,
+  mustChangePassword = false,
 ) {
   const pathname = request.nextUrl.pathname;
-  const isPublicAuthRoute = pathname === "/login" || pathname === "/auth/callback" || pathname === "/auth/accept-invite";
+  const isInitialPasswordRoute = pathname === "/auth/change-initial-password";
+  const isInitialPasswordApi = pathname === "/api/auth/change-initial-password";
+  const isPublicAuthRoute = pathname === "/login" || pathname === "/auth/callback" || pathname === "/auth/accept-invite" || isInitialPasswordRoute;
 
   if (!isAuthenticated && !isPublicAuthRoute) {
     const loginUrl = request.nextUrl.clone();
@@ -43,7 +59,17 @@ function protectRoute(
     return NextResponse.redirect(loginUrl);
   }
 
-  if (isAuthenticated && pathname === "/login") {
+  if (isAuthenticated && mustChangePassword && !isInitialPasswordRoute && !isInitialPasswordApi) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "初回パスワード変更を完了してください。" }, { status: 403 });
+    }
+    const passwordUrl = request.nextUrl.clone();
+    passwordUrl.pathname = "/auth/change-initial-password";
+    passwordUrl.search = "";
+    return NextResponse.redirect(passwordUrl);
+  }
+
+  if (isAuthenticated && !mustChangePassword && (pathname === "/login" || isInitialPasswordRoute)) {
     const homeUrl = request.nextUrl.clone();
     homeUrl.pathname = "/";
     homeUrl.search = "";

@@ -12,6 +12,7 @@ type MemberRow = {
   last_name: string;
   first_name: string;
   email: string;
+  must_change_password: boolean | null;
 };
 
 type AssignmentRow = {
@@ -28,7 +29,7 @@ type AuthenticatedUser = {
 async function findLinkedMember(supabase: NonNullable<ReturnType<typeof createClient>>, user: AuthenticatedUser) {
   const { data: linkedMember, error: linkedMemberError } = await supabase
     .from("members")
-    .select("id, auth_user_id, lom_id, last_name, first_name, email")
+    .select("id, auth_user_id, lom_id, last_name, first_name, email, must_change_password")
     .eq("auth_user_id", user.id)
     .maybeSingle();
 
@@ -45,7 +46,7 @@ async function findLinkedMember(supabase: NonNullable<ReturnType<typeof createCl
 
   const { data: linkedByEmail, error: linkedByEmailError } = await supabase
     .from("members")
-    .select("id, auth_user_id, lom_id, last_name, first_name, email")
+    .select("id, auth_user_id, lom_id, last_name, first_name, email, must_change_password")
     .eq("id", linkedMemberId)
     .maybeSingle();
 
@@ -114,6 +115,7 @@ async function getCurrentAuthContext(): Promise<AuthContext> {
     member,
     isAuthenticated: true,
     canManage: currentRoles.some((role) => managementRoles.includes(role)),
+    mustChangePassword: Boolean(row.must_change_password),
     error: assignmentError?.message ?? null,
   };
 }
