@@ -12,6 +12,21 @@ function isSamePasswordError(error: { code?: string; message?: string }) {
   return error.code === "same_password" || message.includes("different from the old password") || message.includes("same password");
 }
 
+function passwordUpdateErrorMessage(error: { code?: string; message?: string }) {
+  const code = error.code ?? "unknown";
+  const message = error.message?.toLowerCase() ?? "";
+
+  if (code === "weak_password" || message.includes("weak password") || message.includes("password is too weak")) {
+    return "そのパスワードは安全性の条件を満たしていません。英字・数字を組み合わせた、推測されにくい8文字以上のパスワードにしてください。";
+  }
+  if (code === "session_not_found" || message.includes("auth session missing") || message.includes("invalid jwt")) {
+    return "パスワード設定用のログイン状態が切れています。管理者に招待メールの再送を依頼し、最新のメールから開いてください。";
+  }
+
+  // エラーコードだけを表示し、認証情報や招待リンクは画面へ出さない。
+  return `パスワードを設定できませんでした（確認コード: ${code}）。この画面の写真を管理者へ送ってください。`;
+}
+
 export default function AcceptInvitePage() {
   const router = useRouter();
   const [pageState, setPageState] = useState<PageState>("checking");
@@ -69,7 +84,7 @@ export default function AcceptInvitePage() {
 
     const { error: updateError } = await supabase.auth.updateUser({ password });
     if (updateError && !isSamePasswordError(updateError)) {
-      setError("パスワードを設定できませんでした。招待メールを再送してもらい、最新のメールからもう一度お試しください。");
+      setError(passwordUpdateErrorMessage(updateError));
       setIsSaving(false);
       return;
     }
