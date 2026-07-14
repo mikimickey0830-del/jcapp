@@ -207,8 +207,9 @@ Vercelでは同じ3つの環境変数を Project Settings → Environment Variab
 
 - 会員が設定する新しいパスワードは、**8文字以上で、英字と数字をそれぞれ1文字以上**含めます。英大文字・英小文字・記号は必須ではありません。
 - Supabase Dashboard の **Authentication** → **Settings** → **Password Security** で、最小文字数を `8` にし、英大文字・記号を必須にする設定を無効にしてください。Supabase側がより厳しい要件のままだと、アプリで許可したパスワードもSupabaseに拒否されます。
-- 同じ画面で5回連続してログインに失敗すると、ブラウザ上で30秒間ログイン操作を一時停止します。ログイン失敗時の表示は、メールアドレスの登録有無を示さない共通メッセージです。
-- 本番公開前に **Authentication** → **Rate Limits** を確認し、**Bot and Abuse Protection** でCloudflare TurnstileまたはhCaptchaを有効にしてください。Supabaseの標準レート制限と併用します。
+- 同じ画面で5回連続してログインに失敗すると、ブラウザ上で30秒間ログイン操作を一時停止します。これは画面上の補助表示であり、再読み込み、シークレットウィンドウ、別端末、Auth APIの直接呼び出しでは回避できます。認証の防御境界にはしません。
+- 本番公開前に **Authentication** → **Rate Limits** を確認し、**Bot and Abuse Protection** でCloudflare TurnstileまたはhCaptchaを有効にしてください。Rate LimitsとCAPTCHAを主防御とし、画面側の30秒停止は補助として扱います。
+- 独自のサーバー側ログイン制限を導入する場合は、メールアドレスとIPアドレスを組み合わせたハッシュ済みのキーで管理し、成功時のリセット、解除時刻、IP単位とメール単位の両方の上限を設計してから導入します。詳細は `docs/SECURITY.md` を参照してください。
 
 ### 5. 招待メールを確認する
 

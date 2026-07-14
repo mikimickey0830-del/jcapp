@@ -45,6 +45,9 @@ export function LoginForm() {
       const nextFailedAttempts = failedAttempts + 1;
       setFailedAttempts(nextFailedAttempts);
       if (nextFailedAttempts >= 5) {
+        // This is a UX-only pause. It is intentionally not treated as an
+        // authentication security boundary; production protection belongs in
+        // Supabase Auth rate limits and CAPTCHA/server-side controls.
         setIsTemporarilyLocked(true);
         window.setTimeout(() => {
           setFailedAttempts(0);
