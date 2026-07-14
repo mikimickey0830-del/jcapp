@@ -17,6 +17,18 @@ type MemberRequestBody = {
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const validStatuses: MemberStatus[] = ["active", "inactive", "graduated"];
 
+function databaseErrorResponse(error: { code?: string; message: string }) {
+  // 同一LOM内でのメールアドレス重複は、画面で対応方法が分かる形にする。
+  if (error.code === "23505" || error.message.includes("members_lom_id_email_key")) {
+    return NextResponse.json(
+      { error: "このメールアドレスは、すでに別の会員に登録されています。別のメールアドレスを入力してください。" },
+      { status: 409 }
+    );
+  }
+
+  return NextResponse.json({ error: "会員情報を保存できませんでした。時間をおいて再度お試しください。" }, { status: 500 });
+}
+
 function validateMemberInput(body: MemberRequestBody) {
   if (!body.lastName?.trim() || !body.firstName?.trim()) {
     return "氏名は必須です。";
@@ -67,7 +79,7 @@ export async function PATCH(request: Request, { params }: { params: { memberId: 
     .eq("id", params.memberId);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return databaseErrorResponse(error);
   }
 
   return NextResponse.json({ id: params.memberId });
