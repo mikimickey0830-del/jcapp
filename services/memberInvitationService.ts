@@ -51,6 +51,12 @@ function invitationErrorMessage(error: unknown) {
   return "招待メールを送信できませんでした。メールアドレスとSupabase設定を確認してください。";
 }
 
+function isExistingAuthUserError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const code = "code" in error ? String((error as { code?: unknown }).code) : "";
+  return code === "email_exists";
+}
+
 async function getInvitationMember(memberId: string) {
   const supabase = createClient();
   if (!supabase) return { data: null, error: "Supabaseの設定が見つかりません。" };
@@ -125,7 +131,6 @@ async function inviteMember(memberId: string, actor: AuthMember, resend: boolean
   if (resend && member.invitation_status === "invited") {
     const recoveryResult = await sendPasswordSetupEmail(member.email, redirectTo);
     if (!recoveryResult.ok) {
-      await recordInvitation(member.id, "failed");
       return { ok: false, status: 502, message: recoveryResult.message };
     }
     if (!(await recordInvitation(member.id, action))) {
@@ -144,13 +149,15 @@ async function inviteMember(memberId: string, actor: AuthMember, resend: boolean
   });
 
   if (inviteError) {
-    if (resend) {
+    // A partially completed invite already has an Auth user. Its member row
+    // may be marked failed after an earlier mail error, so detect Auth's
+    // email_exists response instead of relying only on invitation_status.
+    if (isExistingAuthUserError(inviteError)) {
       const recoveryResult = await sendPasswordSetupEmail(member.email, redirectTo);
       if (recoveryResult.ok && (await recordInvitation(member.id, action))) {
         return { ok: true, status: "invited", message: "パスワード設定メールを再送しました。" };
       }
       if (!recoveryResult.ok) {
-        await recordInvitation(member.id, "failed");
         return { ok: false, status: 502, message: recoveryResult.message };
       }
     }
