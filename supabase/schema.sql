@@ -262,6 +262,17 @@ create table if not exists public.auth_invitation_audit_logs (
   created_at timestamptz not null default now()
 );
 
+-- Tracks only records created from the development-only test-data control.
+-- The IDs let cleanup target those records without touching normal operations.
+create table if not exists public.development_test_data_runs (
+  id uuid primary key default gen_random_uuid(),
+  lom_id uuid not null references public.loms(id) on delete cascade,
+  created_by_member_id uuid not null references public.members(id) on delete restrict,
+  record_ids jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
 create index if not exists idx_fiscal_years_lom_year on public.fiscal_years(lom_id, year);
 create index if not exists idx_members_lom_status on public.members(lom_id, status);
 create index if not exists idx_members_invitation_status on public.members(lom_id, invitation_status);
@@ -274,6 +285,7 @@ create index if not exists idx_documents_year_uploaded_at on public.documents(fi
 create index if not exists idx_notifications_member_created_at on public.notifications(member_id, created_at desc);
 create index if not exists idx_announcements_year_publish on public.announcements(fiscal_year_id, publish_start_at desc);
 create index if not exists idx_auth_invitation_audit_member_created on public.auth_invitation_audit_logs(member_id, created_at desc);
+create index if not exists idx_development_test_data_runs_lom_active on public.development_test_data_runs(lom_id, deleted_at);
 
 alter table public.loms enable row level security;
 alter table public.fiscal_years enable row level security;
@@ -288,6 +300,7 @@ alter table public.documents enable row level security;
 alter table public.notifications enable row level security;
 alter table public.announcements enable row level security;
 alter table public.auth_invitation_audit_logs enable row level security;
+alter table public.development_test_data_runs enable row level security;
 
 grant usage on schema public to anon, authenticated;
 grant select on all tables in schema public to anon, authenticated;
@@ -300,6 +313,7 @@ grant insert, update on public.committee_memberships to anon, authenticated;
 grant insert, update on public.events to anon, authenticated;
 grant insert, update on public.attendance_responses to anon, authenticated;
 grant insert, update on public.announcements to anon, authenticated;
+grant insert, update on public.development_test_data_runs to anon, authenticated;
 alter default privileges in schema public grant select on tables to anon, authenticated;
 
 -- Development-only read policies.
@@ -333,6 +347,9 @@ drop policy if exists "dev_insert_attendance_responses" on public.attendance_res
 drop policy if exists "dev_update_attendance_responses" on public.attendance_responses;
 drop policy if exists "dev_insert_announcements" on public.announcements;
 drop policy if exists "dev_update_announcements" on public.announcements;
+drop policy if exists "dev_select_development_test_data_runs" on public.development_test_data_runs;
+drop policy if exists "dev_insert_development_test_data_runs" on public.development_test_data_runs;
+drop policy if exists "dev_update_development_test_data_runs" on public.development_test_data_runs;
 
 create policy "dev_select_loms" on public.loms for select using (true);
 create policy "dev_select_fiscal_years" on public.fiscal_years for select using (true);
@@ -346,6 +363,7 @@ create policy "dev_select_attendance_responses" on public.attendance_responses f
 create policy "dev_select_documents" on public.documents for select using (true);
 create policy "dev_select_notifications" on public.notifications for select using (true);
 create policy "dev_select_announcements" on public.announcements for select using (true);
+create policy "dev_select_development_test_data_runs" on public.development_test_data_runs for select using (true);
 create policy "dev_insert_members" on public.members for insert with check (true);
 create policy "dev_update_members" on public.members for update using (true) with check (true);
 create policy "dev_insert_fiscal_years" on public.fiscal_years for insert with check (true);
@@ -358,6 +376,8 @@ create policy "dev_insert_committee_memberships" on public.committee_memberships
 create policy "dev_update_committee_memberships" on public.committee_memberships for update using (true) with check (true);
 create policy "dev_insert_events" on public.events for insert with check (true);
 create policy "dev_update_events" on public.events for update using (true) with check (true);
+create policy "dev_insert_development_test_data_runs" on public.development_test_data_runs for insert with check (true);
+create policy "dev_update_development_test_data_runs" on public.development_test_data_runs for update using (true) with check (true);
 create policy "dev_insert_attendance_responses" on public.attendance_responses for insert with check (true);
 create policy "dev_update_attendance_responses" on public.attendance_responses for update using (true) with check (true);
 create policy "dev_insert_announcements" on public.announcements for insert with check (true);

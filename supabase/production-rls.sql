@@ -1,4 +1,18 @@
 -- Production RLS. Apply after all production users have auth_user_id links.
+-- This table records IDs created by the development-only test-data utility.
+-- Keeping its creation here makes this RLS script safe when applied to older projects.
+create table if not exists public.development_test_data_runs (
+  id uuid primary key default gen_random_uuid(),
+  lom_id uuid not null references public.loms(id) on delete cascade,
+  created_by_member_id uuid not null references public.members(id) on delete restrict,
+  record_ids jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+create index if not exists idx_development_test_data_runs_lom_active
+  on public.development_test_data_runs(lom_id, deleted_at);
+alter table public.development_test_data_runs enable row level security;
+
 create or replace function public.current_member_id()
 returns uuid language sql stable security definer set search_path = public
 as $$ select id from public.members where auth_user_id = auth.uid() limit 1 $$;
@@ -257,6 +271,8 @@ drop policy if exists "manager_write_events" on public.events;
 drop policy if exists "manager_write_documents" on public.documents;
 drop policy if exists "manager_write_notifications" on public.notifications;
 drop policy if exists "manager_write_announcements" on public.announcements;
+drop policy if exists "manager_read_development_test_data_runs" on public.development_test_data_runs;
+drop policy if exists "manager_write_development_test_data_runs" on public.development_test_data_runs;
 
 create policy "lom_read_loms" on public.loms for select to authenticated using (id = public.current_lom_id());
 create policy "lom_read_years" on public.fiscal_years for select to authenticated using (lom_id = public.current_lom_id());
@@ -311,9 +327,13 @@ create policy "manager_write_notifications" on public.notifications for all to a
   using (public.can_manage_lom(lom_id)) with check (public.can_manage_lom(lom_id));
 create policy "manager_write_announcements" on public.announcements for all to authenticated
   using (public.can_manage_lom(lom_id)) with check (public.can_manage_lom(lom_id));
+create policy "manager_read_development_test_data_runs" on public.development_test_data_runs for select to authenticated
+  using (public.can_manage_lom(lom_id));
+create policy "manager_write_development_test_data_runs" on public.development_test_data_runs for all to authenticated
+  using (public.can_manage_lom(lom_id)) with check (public.can_manage_lom(lom_id));
 
 grant insert on public.members to authenticated;
 grant insert, update on public.fiscal_years, public.committees,
   public.positions, public.annual_member_assignments, public.committee_memberships,
   public.events, public.attendance_responses, public.documents, public.notifications,
-  public.announcements to authenticated;
+  public.announcements, public.development_test_data_runs to authenticated;

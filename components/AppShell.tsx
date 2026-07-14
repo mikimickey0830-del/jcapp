@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { EnvironmentBadge } from "@/components/EnvironmentBadge";
 import { LogoutButton } from "@/components/LogoutButton";
 
 type AppShellProps = {
@@ -18,7 +19,15 @@ const navItems = [
 export function AppShell({ children }: AppShellProps) {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-slate-50 shadow-soft">
-      <div className="flex justify-end px-2 pt-2">
+      <div className="flex items-center justify-end gap-2 px-2 pt-2">
+        <EnvironmentBadge />
+        <Link
+          aria-label="設定"
+          className="inline-flex min-h-8 items-center rounded-md px-2 text-xs font-bold text-jc-blue hover:bg-jc-sky"
+          href="/settings"
+        >
+          設定
+        </Link>
         <LogoutButton />
       </div>
       <div className="flex-1 px-5 pb-24 pt-1">{children}</div>

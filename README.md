@@ -25,6 +25,7 @@ pnpm dev
 `.env.example` を参考に `.env.local` を作成します。
 
 ```bash
+NEXT_PUBLIC_APP_ENV=development
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-publishable-or-anon-key
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
@@ -32,6 +33,37 @@ SUPABASE_SECRET_KEY=your-server-only-secret-key
 ```
 
 `.env.local` はGitにコミットしません。
+
+## 環境構成
+
+JC-Appは、開発・テスト・本番の3環境を前提にします。環境ごとにSupabaseプロジェクトとVercelの環境変数を分離し、本番データを開発・テスト環境へコピーしないでください。
+
+| 環境 | `NEXT_PUBLIC_APP_ENV` | 用途 | テストデータ |
+| --- | --- | --- | --- |
+| 開発 | `development` | ローカル開発・画面確認 | 現在年度の管理者だけが作成・削除可能 |
+| テスト | `test` | 公開前の受入テスト | 作成・削除不可 |
+| 本番 | `production` | 玉島青年会議所の実運用 | 作成・削除不可 |
+
+各環境の `.env.local` またはVercelのEnvironment Variablesに、必ず次の値を設定します。
+
+```bash
+NEXT_PUBLIC_APP_ENV=development
+```
+
+未設定時は、ローカルでは `development`、本番ビルドでは安全側の `production` として扱います。画面右上の環境バッジと `/settings` で、実際に読み込まれている環境を確認してください。
+
+Vercelでは、Developmentに `development`、Preview（または受入テスト専用プロジェクト）に `test`、Productionに `production` を設定します。Supabase URL・Publishable key・Secret keyも同じ環境区分ごとに分離してください。
+
+### 開発用テストデータ
+
+`development` かつ現在年度で有効な `admin` / `president` / `secretary` だけが、`/settings` からサンプル予定・サンプルお知らせを作成または削除できます。操作はサーバー側でも環境と権限を確認するため、`test` と `production` ではボタンを表示せず、APIも拒否します。
+
+既存のSupabaseプロジェクトでは、SQL Editorで次を実行してください。
+
+1. `supabase/environment-test-data-migration.sql`
+2. `supabase/production-rls.sql`（RLSを最新化する場合）
+
+作成されたテストデータのIDは `development_test_data_runs` に記録されます。削除操作は、この記録に紐付く予定・お知らせだけを論理削除します。通常の会員・年度・予定・お知らせは削除対象になりません。
 
 ## Supabase設定手順
 
