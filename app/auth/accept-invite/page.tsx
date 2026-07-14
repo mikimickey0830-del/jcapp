@@ -7,6 +7,11 @@ import { createClient } from "@/lib/supabase/client";
 
 type PageState = "checking" | "ready" | "invalid";
 
+function isSamePasswordError(error: { code?: string; message?: string }) {
+  const message = error.message?.toLowerCase() ?? "";
+  return error.code === "same_password" || message.includes("different from the old password") || message.includes("same password");
+}
+
 export default function AcceptInvitePage() {
   const router = useRouter();
   const [pageState, setPageState] = useState<PageState>("checking");
@@ -51,9 +56,20 @@ export default function AcceptInvitePage() {
     }
 
     setIsSaving(true);
+    // 招待リンクのセッションが失効している場合は、更新前に案内する。
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      setError("パスワード設定用のログイン状態が切れています。管理者に招待メールの再送を依頼し、最新のメールから開いてください。");
+      setIsSaving(false);
+      return;
+    }
+
     const { error: updateError } = await supabase.auth.updateUser({ password });
-    if (updateError) {
-      setError("パスワードを設定できませんでした。招待リンクの期限を確認してください。");
+    if (updateError && !isSamePasswordError(updateError)) {
+      setError("パスワードを設定できませんでした。招待メールを再送してもらい、最新のメールからもう一度お試しください。");
       setIsSaving(false);
       return;
     }
