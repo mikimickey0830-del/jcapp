@@ -65,6 +65,8 @@ Vercelでは、Developmentに `development`、Preview（または受入テスト
 
 作成されたテストデータのIDは `development_test_data_runs` に記録されます。削除操作は、この記録に紐付く予定・お知らせだけを論理削除します。通常の会員・年度・予定・お知らせは削除対象になりません。
 
+新規SupabaseプロジェクトのSQL適用順、テスト用初期データ、Vercelのテスト環境公開手順は [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) を参照してください。
+
 ## Supabase設定手順
 
 1. Supabaseでプロジェクトを作成します。

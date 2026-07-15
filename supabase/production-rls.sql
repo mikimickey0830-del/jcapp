@@ -271,6 +271,9 @@ drop policy if exists "manager_write_events" on public.events;
 drop policy if exists "manager_write_documents" on public.documents;
 drop policy if exists "manager_write_notifications" on public.notifications;
 drop policy if exists "manager_write_announcements" on public.announcements;
+drop policy if exists "dev_select_development_test_data_runs" on public.development_test_data_runs;
+drop policy if exists "dev_insert_development_test_data_runs" on public.development_test_data_runs;
+drop policy if exists "dev_update_development_test_data_runs" on public.development_test_data_runs;
 drop policy if exists "manager_read_development_test_data_runs" on public.development_test_data_runs;
 drop policy if exists "manager_write_development_test_data_runs" on public.development_test_data_runs;
 

@@ -17,6 +17,9 @@ alter table public.development_test_data_runs enable row level security;
 
 drop policy if exists "manager_read_development_test_data_runs" on public.development_test_data_runs;
 drop policy if exists "manager_write_development_test_data_runs" on public.development_test_data_runs;
+drop policy if exists "dev_select_development_test_data_runs" on public.development_test_data_runs;
+drop policy if exists "dev_insert_development_test_data_runs" on public.development_test_data_runs;
+drop policy if exists "dev_update_development_test_data_runs" on public.development_test_data_runs;
 
 create policy "manager_read_development_test_data_runs" on public.development_test_data_runs for select to authenticated
   using (public.can_manage_lom(lom_id));
