@@ -9,11 +9,18 @@ import type { ScheduleEvent } from "@/types/schedule";
 // Events are updated through the management screens, so this page must read current data at request time.
 export const dynamic = "force-dynamic";
 
-export default async function SchedulePage() {
+type SchedulePageProps = {
+  searchParams?: {
+    view?: string;
+  };
+};
+
+export default async function SchedulePage({ searchParams }: SchedulePageProps) {
   noStore();
   const result = await scheduleService.getEvents();
   const events = result.data;
   const listedEvents = events;
+  const view = searchParams?.view === "list" ? "list" : "month";
   const fiscalYearCount = new Set(events.map((event) => event.fiscalYearId)).size;
 
   return (
@@ -36,75 +43,89 @@ export default async function SchedulePage() {
 
       <section className="mt-5 rounded-md border border-jc-line bg-white p-1 shadow-sm">
         <div className="grid grid-cols-2 gap-1">
-          <button className="min-h-11 rounded-md bg-jc-blue text-sm font-bold text-white" type="button">
+          <Link
+            aria-current={view === "month" ? "page" : undefined}
+            className={`flex min-h-11 items-center justify-center rounded-md text-sm font-bold ${
+              view === "month" ? "bg-jc-blue text-white" : "text-slate-600"
+            }`}
+            href="/schedule?view=month"
+          >
             月表示
-          </button>
-          <button className="min-h-11 rounded-md text-sm font-bold text-slate-600" type="button">
+          </Link>
+          <Link
+            aria-current={view === "list" ? "page" : undefined}
+            className={`flex min-h-11 items-center justify-center rounded-md text-sm font-bold ${
+              view === "list" ? "bg-jc-blue text-white" : "text-slate-600"
+            }`}
+            href="/schedule?view=list"
+          >
             リスト表示
-          </button>
+          </Link>
         </div>
       </section>
 
-      <section className="mt-5">
-        <h2 className="text-lg font-bold text-jc-navy">月表示</h2>
-        <div className="mt-3 space-y-3">
-          {getMonthGroups(listedEvents).map((group) => (
-            <article className="rounded-md border border-jc-line bg-white p-4 shadow-sm" key={group.monthLabel}>
-              <h3 className="font-bold text-jc-navy">{group.monthLabel}</h3>
-              <div className="mt-3 grid gap-2">
-                {group.events.map((event) => (
-                  <Link
-                    className="flex min-h-12 items-center justify-between gap-3 rounded-md bg-slate-50 px-3"
-                    href={`/schedule/${event.id}`}
-                    key={event.id}
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-slate-900">{event.title}</p>
-                      <p className="text-xs text-slate-500">{scheduleService.formatEventDate(event)}</p>
-                    </div>
-                    <StatusPill label={scheduleService.eventTypeLabels[event.eventType]} tone={scheduleService.eventTypeTones[event.eventType]} />
-                  </Link>
-                ))}
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="mt-6">
-        <h2 className="text-lg font-bold text-jc-navy">リスト表示</h2>
-        <div className="mt-3 space-y-3">
-          {listedEvents.map((event) => (
-            <Link
-              className="block rounded-md border border-jc-line bg-white p-4 shadow-sm transition hover:border-jc-blue hover:shadow-soft"
-              href={`/schedule/${event.id}`}
-              key={event.id}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold text-slate-500">
-                    {event.lomName} / {event.fiscalYear}年度
-                  </p>
-                  <h3 className="mt-1 text-lg font-bold text-slate-900">{event.title}</h3>
+      {view === "month" ? (
+        <section className="mt-5">
+          <h2 className="text-lg font-bold text-jc-navy">月表示</h2>
+          <div className="mt-3 space-y-3">
+            {getMonthGroups(listedEvents).map((group) => (
+              <article className="rounded-md border border-jc-line bg-white p-4 shadow-sm" key={group.monthLabel}>
+                <h3 className="font-bold text-jc-navy">{group.monthLabel}</h3>
+                <div className="mt-3 grid gap-2">
+                  {group.events.map((event) => (
+                    <Link
+                      className="flex min-h-12 items-center justify-between gap-3 rounded-md bg-slate-50 px-3"
+                      href={`/schedule/${event.id}`}
+                      key={event.id}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-slate-900">{event.title}</p>
+                        <p className="text-xs text-slate-500">{scheduleService.formatEventDate(event)}</p>
+                      </div>
+                      <StatusPill label={scheduleService.eventTypeLabels[event.eventType]} tone={scheduleService.eventTypeTones[event.eventType]} />
+                    </Link>
+                  ))}
                 </div>
-                <StatusPill label={scheduleService.eventTypeLabels[event.eventType]} tone={scheduleService.eventTypeTones[event.eventType]} />
-              </div>
-              <div className="mt-3 grid gap-1 text-sm text-slate-600">
-                <span>
-                  {scheduleService.formatEventDate(event)} - {event.endTime}
-                </span>
-                <span>{event.venue || "会場未設定"}</span>
-                <span>対象: {event.targetAudience || "未設定"}</span>
-              </div>
-              {event.requiresAttendance ? (
-                <p className="mt-3 rounded-md bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">
-                  出欠返信期限: {event.attendanceDeadline ?? "未設定"}
-                </p>
-              ) : null}
-            </Link>
-          ))}
-        </div>
-      </section>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <section className="mt-5">
+          <h2 className="text-lg font-bold text-jc-navy">リスト表示</h2>
+          <div className="mt-3 space-y-3">
+            {listedEvents.map((event) => (
+              <Link
+                className="block rounded-md border border-jc-line bg-white p-4 shadow-sm transition hover:border-jc-blue hover:shadow-soft"
+                href={`/schedule/${event.id}`}
+                key={event.id}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-slate-500">
+                      {event.lomName} / {event.fiscalYear}年度
+                    </p>
+                    <h3 className="mt-1 text-lg font-bold text-slate-900">{event.title}</h3>
+                  </div>
+                  <StatusPill label={scheduleService.eventTypeLabels[event.eventType]} tone={scheduleService.eventTypeTones[event.eventType]} />
+                </div>
+                <div className="mt-3 grid gap-1 text-sm text-slate-600">
+                  <span>
+                    {scheduleService.formatEventDate(event)} - {event.endTime}
+                  </span>
+                  <span>{event.venue || "会場未設定"}</span>
+                  <span>対象: {event.targetAudience || "未設定"}</span>
+                </div>
+                {event.requiresAttendance ? (
+                  <p className="mt-3 rounded-md bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">
+                    出欠返信期限: {event.attendanceDeadline ?? "未設定"}
+                  </p>
+                ) : null}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </AppShell>
   );
 }
