@@ -61,23 +61,54 @@ flowchart LR
 
 ## 4. SQL適用順
 
-### 新規のテスト用・本番用Supabase
+### 新規のテスト用・本番用Supabase: 正式な適用順
 
 SQL Editorで、次の順番に**1ファイルずつ**実行します。各実行後に `Success. No rows returned` または正常完了を確認してから次へ進みます。
 
 | 順番 | ファイル | 対象 | 備考 |
 | --- | --- | --- | --- |
-| 1 | `supabase/schema.sql` | テスト・本番 | テーブル、開発用の初期ポリシーを作成 |
-| 2 | `supabase/seed.sql` | テストのみ | 架空の初期データ。**本番では実行しない** |
-| 3 | `supabase/auth-auto-link-migration.sql` | テスト・本番 | 初回ログイン時のメール一致による会員紐付け |
-| 4 | `supabase/production-rls.sql` | テスト・本番 | LOM・本人・現在年度の管理権限でRLSを制限 |
-| 5 | `supabase/auth-invitation-rls-migration.sql` | テスト・本番 | 招待状態と監査ログのRLS対応 |
-| 6 | `supabase/initial-password-migration.sql` | テスト・本番 | 初期パスワード発行と初回変更必須 |
-| 7 | `supabase/environment-test-data-migration.sql` | テスト・本番 | 開発用テストデータの追跡テーブル。再実行可 |
+| 1 | `supabase/schema.sql` | テスト・本番 | 最新の全テーブル・列・監査ログテーブルを作成する。実行直後は開発用の暫定RLSがある。 |
+| 2 | `supabase/seed.sql` | **テストのみ** | 架空の玉島青年会議所データを投入する。**本番では絶対に実行しない**。 |
+| 3 | `supabase/production-rls.sql` | テスト・本番 | Auth自動紐付け、招待・初期パスワード用RPC、現在年度の管理権限判定、厳格なRLS・列権限をまとめて適用する。セキュリティ境界となる最後の主要SQL。 |
+| 4 | `supabase/environment-test-data-migration.sql` | テスト・本番 | テストデータ追跡テーブルのRLSを明示的に最新化する。`can_manage_lom` に依存するため、必ず手順3の後に実行する。再実行可。 |
 
-`schema.sql` は新規プロジェクト用の最新ベースです。`auth-schema-migration.sql`、`auth-invitation-migration.sql`、`announcement-crud-migration.sql` は、過去の既存DBを段階更新するためのファイルであり、新規プロジェクトには通常不要です。
+`production-rls.sql` には、`auth-auto-link-migration.sql`、`auth-invitation-rls-migration.sql`、`initial-password-migration.sql` と同等の最新RPC・権限設定が含まれています。したがって、**新規プロジェクトではこの3ファイルを追加実行する必要はありません**。重複実行してもRLSを緩める内容ではありませんが、同じ関数・ポリシーを再定義するだけなので、正式手順から外します。
+
+`auth-schema-migration.sql`、`auth-invitation-migration.sql`、`auth-auto-link-migration.sql`、`auth-invitation-rls-migration.sql`、`initial-password-migration.sql`、`announcement-crud-migration.sql` は、過去の既存DBを段階更新するための互換migrationです。**空の新規プロジェクトには実行しません**。既存DBへ適用する場合だけ、現状を確認して必要なファイルを選び、最後に最新版の `production-rls.sql` を実行します。
 
 `dev-grants.sql` はRLSを緩める開発補助用です。テスト環境・本番環境へ実行してはいけません。
+
+### 4.1 成功確認と失敗時の再開
+
+各SQLの実行直後に、SQL Editorの結果が `Success. No rows returned` であることを確認します。さらに、次の確認SQLを実行します。
+
+```sql
+-- テーブルとRLSの有効化を確認
+select tablename, rowsecurity
+from pg_tables
+where schemaname = 'public'
+  and tablename in ('members', 'fiscal_years', 'auth_invitation_audit_logs', 'development_test_data_runs')
+order by tablename;
+
+-- 本番RLSで必要なRPCがあることを確認
+select routine_name
+from information_schema.routines
+where routine_schema = 'public'
+  and routine_name in (
+    'can_manage_lom',
+    'link_current_member_by_email',
+    'record_member_invitation',
+    'activate_current_member_invitation',
+    'complete_initial_password_change',
+    'link_issued_member_account'
+  )
+order by routine_name;
+
+-- テスト環境でseedを実行した場合だけ、架空LOMを確認
+select name, slug from public.loms where slug = 'tamashima';
+```
+
+途中で失敗した場合は、**開発用・本番用プロジェクトへ切り替えず**、エラーが出た同じテスト用プロジェクトで止めます。エラー内容を確認して原因を解消した後、失敗したファイルだけを再実行します。`schema.sql` は実行後に暫定RLSを作り直すため、途中から再実行した場合は必ず `production-rls.sql` と `environment-test-data-migration.sql` を続けて再実行し、最後のRLS状態を戻します。`seed.sql` は固定IDの `upsert` ですが、架空データを更新するため、実在データを含む環境では再実行しません。
 
 ### 既存DBを更新するとき
 

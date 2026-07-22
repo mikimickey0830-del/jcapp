@@ -191,16 +191,14 @@ git push
 
 ### 1. SQLを反映する
 
-Supabase Dashboard の **SQL Editor** を開き、次の順に実行します。
+空の新規Supabaseプロジェクトでは、次の順に実行します。
 
-1. 初回のみ `supabase/schema.sql`
-2. 初回のみ `supabase/seed.sql`
-3. Auth導入済みでない場合は `supabase/auth-schema-migration.sql`
-4. `supabase/auth-invitation-migration.sql`
-5. `supabase/initial-password-migration.sql`
-6. 本番RLSを利用する場合は、最新版の `supabase/production-rls.sql`
+1. `supabase/schema.sql`
+2. `supabase/seed.sql`（テスト環境だけ。本番では実行しない）
+3. `supabase/production-rls.sql`
+4. `supabase/environment-test-data-migration.sql`
 
-既存環境では、SQL Editorで手順5を実行してから、手順6を実行してください。どちらも既存会員や既存Auth連携を削除しません。
+最新版の `schema.sql` と `production-rls.sql` には、Auth自動紐付け、招待、初期パスワード用の列・RPC・RLSが含まれます。そのため、新規プロジェクトで `auth-auto-link-migration.sql`、`auth-invitation-rls-migration.sql`、`initial-password-migration.sql` を重ねて実行する必要はありません。これらは過去の既存DBを段階更新するための互換migrationです。既存環境への適用やSQL成功確認の手順は [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) を参照してください。
 
 ### 2. サーバー専用Secret keyを設定する
 
