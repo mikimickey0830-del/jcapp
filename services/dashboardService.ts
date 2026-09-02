@@ -1,7 +1,6 @@
 import { announcementService } from "@/services/announcementService";
 import { assignmentService } from "@/services/assignmentService";
 import { attendanceService } from "@/services/attendanceService";
-import { documentService } from "@/services/documentService";
 import { scheduleService } from "@/services/scheduleService";
 import { yearService } from "@/services/yearService";
 import type { Announcement } from "@/types/announcement";
@@ -64,12 +63,11 @@ function isTargetEvent(
 
 async function getDashboard(viewer?: DashboardViewer): Promise<DashboardResult> {
   const currentMemberId = viewer?.memberId;
-  const [yearsResult, scheduleResult, announcementResult, documentResult] =
+  const [yearsResult, scheduleResult, announcementResult] =
     await Promise.all([
       yearService.getYears(),
       scheduleService.getEvents(),
       announcementService.getLatestAnnouncements(8),
-      documentService.getLatestDocuments(4),
     ]);
 
   const currentFiscalYear = findCurrentFiscalYear(yearsResult.data);
@@ -86,7 +84,6 @@ async function getDashboard(viewer?: DashboardViewer): Promise<DashboardResult> 
     yearsResult.error,
     scheduleResult.error,
     announcementResult.error,
-    documentResult.error,
     attendanceResult.error,
     assignmentResult?.error,
   ].filter((message): message is string => Boolean(message));
@@ -106,16 +103,6 @@ async function getDashboard(viewer?: DashboardViewer): Promise<DashboardResult> 
           (membership) => membership.committeeId === announcement.targetCommitteeId,
         )),
   );
-  const isManager = Boolean(
-    currentAssignment && ["admin", "president", "secretary"].includes(currentAssignment.role),
-  );
-  const visibleDocuments = documentResult.data.filter((document) => {
-    if (!viewer || (document.lomId && document.lomId !== viewer.lomId)) return false;
-    if (document.visibility === "all") return true;
-    if (document.visibility === "board") return Boolean(currentAssignment?.isBoardMember || isManager);
-    return isManager;
-  });
-
   const todayEvents = scheduleService.getTodayEvents(visibleEvents);
   const todayIds = new Set(todayEvents.map((event) => event.id));
   const thisWeekEvents = scheduleService
@@ -132,14 +119,12 @@ async function getDashboard(viewer?: DashboardViewer): Promise<DashboardResult> 
       thisWeekEvents,
       attendance: attendanceResult.data,
       announcements: sortAnnouncements(visibleAnnouncements).slice(0, 4),
-      documents: visibleDocuments,
     },
     errors: Array.from(new Set(errors)),
     usesFallback: [
       yearsResult.source,
       scheduleResult.source,
       announcementResult.source,
-      documentResult.source,
       attendanceResult.source,
       assignmentResult?.source,
     ].some((source) => source === "fallback"),

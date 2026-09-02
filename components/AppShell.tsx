@@ -11,7 +11,6 @@ const navItems = [
   { href: "/", label: "ホーム", icon: "H" },
   { href: "/schedule", label: "予定", icon: "S" },
   { href: "/attendance", label: "出欠", icon: "A" },
-  { href: "/documents", label: "資料", icon: "D" },
   { href: "/committees", label: "委員会", icon: "C" },
   { href: "/members", label: "会員", icon: "M" }
 ];
@@ -32,7 +31,7 @@ export function AppShell({ children }: AppShellProps) {
       </div>
       <div className="flex-1 px-5 pb-24 pt-1">{children}</div>
       <nav className="fixed bottom-0 left-1/2 z-10 w-full max-w-[430px] -translate-x-1/2 border-t border-jc-line bg-white/95 px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-2 backdrop-blur">
-        <div className="grid grid-cols-6 gap-1">
+        <div className="grid grid-cols-5 gap-1">
           {navItems.map((item) => (
             <Link
               aria-label={item.label}

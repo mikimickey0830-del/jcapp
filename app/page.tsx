@@ -5,7 +5,6 @@ import { StatusPill } from "@/components/StatusPill";
 import { announcementService } from "@/services/announcementService";
 import { authService } from "@/services/authService";
 import { dashboardService } from "@/services/dashboardService";
-import { documentService } from "@/services/documentService";
 import { scheduleService } from "@/services/scheduleService";
 import type { Announcement } from "@/types/announcement";
 import type { AssignmentCommitteeMembership } from "@/types/assignment";
@@ -49,7 +48,6 @@ export default async function HomePage() {
     thisWeekEvents,
     attendance,
     announcements,
-    documents,
   } = result.data;
   const deadlineItems = uniqueDeadlineItems(attendance);
 
@@ -159,28 +157,6 @@ export default async function HomePage() {
             <AnnouncementCard announcement={announcement} key={announcement.id} />
           ))}
           {announcements.length === 0 ? <EmptyState text="公開中のお知らせはありません。" /> : null}
-        </div>
-      </DashboardSection>
-
-      <DashboardSection actionHref="/documents" actionLabel="一覧へ" title="新着資料">
-        <div className="overflow-hidden rounded-md border border-jc-line bg-white shadow-sm">
-          {documents.map((document) => (
-            <Link
-              className="flex min-h-14 items-center justify-between gap-3 border-b border-jc-line px-4 py-3 last:border-b-0"
-              href={`/documents/${document.id}`}
-              key={document.id}
-            >
-              <div className="min-w-0">
-                <p className="break-words text-sm font-bold text-slate-900">{document.title}</p>
-                <p className="mt-1 text-xs text-slate-500">{formatDate(document.uploadedAt)}</p>
-              </div>
-              <StatusPill
-                label={documentService.fileTypeLabels[document.fileType]}
-                tone={documentService.documentToneByFileType[document.fileType]}
-              />
-            </Link>
-          ))}
-          {documents.length === 0 ? <EmptyState text="新着資料はありません。" /> : null}
         </div>
       </DashboardSection>
 

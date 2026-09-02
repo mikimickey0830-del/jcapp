@@ -57,7 +57,7 @@ flowchart LR
 5. Redirect URLsへ `<SITE_URL>/auth/callback` と `<SITE_URL>/auth/accept-invite` を追加する。
 6. Authentication > Password Security、Rate Limits、Bot and Abuse Protectionを開発環境と同じ方針で設定する。
 
-テスト用プロジェクトへ本番の会員、メールアドレス、出欠、資料、Authユーザー、認証情報をコピーしてはいけません。テストでは架空の会員・架空のメールアドレス・架空の資料だけを使用します。
+テスト用プロジェクトへ本番の会員、メールアドレス、出欠、Authユーザー、認証情報をコピーしてはいけません。テストでは架空の会員・架空のメールアドレスだけを使用します。
 
 ## 4. SQL適用順
 
@@ -147,7 +147,7 @@ select name, slug from public.loms where slug = 'tamashima';
 - `/settings` にテストデータ操作が表示されない。
 - 本番URLだけがSupabase AuthenticationのSite URL・Redirect URLsに設定されている。
 - 本番用の管理者、LOM、現在年度、RLSを確認済み。
-- テスト用の架空データ、テストAuthユーザー、テスト資料を本番へ移していない。
+- テスト用の架空データ、テストAuthユーザーを本番へ移していない。
 
 ## 8. 残課題
 

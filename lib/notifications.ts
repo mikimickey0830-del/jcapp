@@ -3,7 +3,7 @@ import type { AppNotification, NotificationStatus, NotificationType } from "@/ty
 export const notificationTypeLabels: Record<NotificationType, string> = {
   attendance_deadline: "出欠期限",
   event_today: "イベント当日",
-  document_added: "資料追加",
+  document_added: "アジェンダ更新",
   announcement: "お知らせ",
   system: "システム"
 };
@@ -27,13 +27,13 @@ export const notifications: AppNotification[] = [
   },
   {
     id: "n002",
-    title: "新しい資料が追加されました",
-    body: "7月例会資料が資料共有に追加されました。",
+    title: "アジェンダが更新されました",
+    body: "7月例会資料が外部アジェンダシステムに追加されました。",
     type: "document_added",
     status: "unread",
     memberId: "m004",
     fiscalYear: 2026,
-    relatedHref: "/documents/d001",
+    relatedHref: "/announcements/a002",
     createdAt: "2026-07-09 10:20"
   },
   {

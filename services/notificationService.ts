@@ -24,7 +24,7 @@ export type NotificationQueryResult = {
 const notificationTypeLabels: Record<NotificationType, string> = {
   attendance_deadline: "出欠期限",
   event_today: "イベント当日",
-  document_added: "資料追加",
+  document_added: "アジェンダ更新",
   announcement: "お知らせ",
   system: "システム",
 };

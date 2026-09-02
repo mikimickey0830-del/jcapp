@@ -25,7 +25,7 @@ const announcementTypeLabels: Record<AnnouncementType, string> = {
   board_meeting: "理事会案内",
   committee: "委員会連絡",
   deadline: "締切案内",
-  document_added: "資料追加",
+  document_added: "アジェンダ更新",
   other: "その他"
 };
 

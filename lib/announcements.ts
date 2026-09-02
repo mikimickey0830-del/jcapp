@@ -13,7 +13,7 @@ export const announcementTypeLabels: Record<AnnouncementType, string> = {
   board_meeting: "理事会案内",
   committee: "委員会連絡",
   deadline: "締切案内",
-  document_added: "資料追加",
+  document_added: "アジェンダ更新",
   other: "その他"
 };
 
@@ -76,9 +76,9 @@ export const announcements: Announcement[] = [
     lomId: "00000000-0000-0000-0000-000000000001",
     fiscalYearId: "10000000-0000-0000-0000-000000002026",
     fiscalYearName: "2026年度",
-    title: "理事会資料を追加しました",
+    title: "理事会アジェンダを更新しました",
     body:
-      "第7回理事会の資料を資料共有に追加しました。議案書、前回議事録、参考資料を事前に確認してください。",
+      "第7回理事会の資料を外部アジェンダシステムに追加しました。議案書、前回議事録、参考資料を事前に確認してください。",
     type: "document_added",
     fiscalYear: 2026,
     targetLom: "玉島青年会議所",

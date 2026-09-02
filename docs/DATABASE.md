@@ -148,7 +148,7 @@ LOMを管理します。
 
 ### documents
 
-資料共有を管理します。実ファイルは将来的にSupabase Storageへ保存します。
+旧資料共有機能の互換性を保つために残しているテーブルです。JC-Appの画面からは利用せず、資料管理は別途構築したアジェンダシステムで行います。既存データ保護のため、現時点ではテーブルを削除しません。
 
 - `id`: uuid primary key
 - `lom_id`: uuid references `loms.id`
